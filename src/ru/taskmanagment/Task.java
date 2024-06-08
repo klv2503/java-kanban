@@ -1,9 +1,11 @@
+package ru.taskmanagment;
+
 public class Task {
     public int code;
     public String name;
     public String description;
 
-    public Task(String name, String description) {
+    public Task() {
         this.name = name;
         this.description = description;
     }
@@ -41,7 +43,7 @@ public class Task {
     @Override
     public String toString() {
         return "Task{" +
-                "code=" + code +
+                "code= " + code +
                 ", name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 '}';
