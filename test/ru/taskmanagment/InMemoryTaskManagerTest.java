@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class InMemoryTaskManagerTest {
 
     static InMemoryTaskManager inMemoryTaskManager = new InMemoryTaskManager();
+    static EpicAdmin epicAdmin = new EpicAdmin();
     static int numberOfGeneratedTasks = 10;
     static int numberOfGeneratedEpics = 5;
     static Random rnd = new Random();
@@ -37,31 +38,6 @@ public class InMemoryTaskManagerTest {
     }
 
     //Тестирование InMemoryTaskManager
-    @Test
-    public void shouldCorrectlyDefineIfArrayListIsEmpty() {
-        boolean resoult;
-        ArrayList<Task> tasks = new ArrayList<>();
-        resoult = inMemoryTaskManager.isListNotEmpty(tasks);
-        assertEquals(false, resoult, "Временный список задач должен быть пуст.");
-        tasks.add(inMemoryTaskManager.getTaskWithId(1));
-        resoult = inMemoryTaskManager.isListNotEmpty(tasks);
-        assertEquals(true, resoult, "Во временный список задач одна записана.");
-        ArrayList<SubTask> subTasks = new ArrayList<>();
-        resoult = inMemoryTaskManager.isListNotEmpty(subTasks);
-        assertEquals(false, resoult, "Временный список подзадач должен быть пуст.");
-        SubTask subTask = inMemoryTaskManager.getEpicsSubTaskByNumber(1,1);
-        if ( !(subTask == null) ) {
-            subTasks.add(subTask);
-            resoult = inMemoryTaskManager.isListNotEmpty(subTasks);
-            assertEquals(true, resoult, "Во временный список подзадач одна записана.");
-        }
-        ArrayList<Epic> epics = new ArrayList<>();
-        resoult = inMemoryTaskManager.isListNotEmpty(epics);
-        assertEquals(false, resoult, "Временный список эпиков должен быть пуст.");
-        epics.add(inMemoryTaskManager.getEpicByCode(1));
-        resoult = inMemoryTaskManager.isListNotEmpty(epics);
-        assertEquals(true, resoult, "Во временный список эпиков один записан.");
-    }
 
     @Test
     public void shouldCreateTaskAndFindAfter() {
@@ -94,9 +70,10 @@ public class InMemoryTaskManagerTest {
         int place = 3;
         String errorMessage = "Данные найденной подзадачи не совпадают с данными задачи-прототипа";
         Task task = inMemoryTaskManager.getTaskWithId(6);
-        System.out.println(inMemoryTaskManager.getHowSubTasks(2));
         inMemoryTaskManager.addNewSubToEpic(epicId, taskId, place);
-        if (place > inMemoryTaskManager.getHowSubTasks(epicId)) place = inMemoryTaskManager.getHowSubTasks(epicId);
+        if (place > inMemoryTaskManager.getHowSubTasks(epicId)) {
+            place = inMemoryTaskManager.getHowSubTasks(epicId);
+        }
         SubTask subTask = inMemoryTaskManager.getEpicsSubTaskByNumber(epicId, place);
         boolean resoult = subTask.name.equals(task.name) && subTask.description.equals(task.description);
         assertEquals(true, resoult, errorMessage);
@@ -138,15 +115,17 @@ public class InMemoryTaskManagerTest {
         }
         if (id1 == id2) {
             assertEquals(task1, task2, "id1 = id2, but task1 is not equal task2");
-        } else assertNotEquals(task1, task2, "id1 is not equal id2, but task1 is equal task2");
+        } else {
+            assertNotEquals(task1, task2, "id1 is not equal id2, but task1 is equal task2");
+        }
     }
 
-    @Test
+/*    @Test
     public void shouldSayEpicCantBeOwnSubtask() {
         String errorMessage = "Эпик добавлен самому себе в качестве подзадачи";
-        boolean resoult = inMemoryTaskManager.addEpicAsSubTask(1,1);
+        boolean resoult = inMemoryTaskManager.addEpicAsSubTask(1, 1);
         assertEquals(false, resoult, errorMessage);
-    }
+    } */
 
     // Блок тестирования HistoryManager
     @Test
@@ -199,7 +178,7 @@ public class InMemoryTaskManagerTest {
         task = inMemoryTaskManager.getTaskWithId(1);
 
         ArrayList<Task> currentArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
-        if (inMemoryTaskManager.isListNotEmpty(currentArray)) {
+        if (!currentArray.isEmpty()) {
             int arraySize = currentArray.size() - 1;
             task = currentArray.get(arraySize - 1);
             assertEquals(oldName, task.name, "Имя старой версии задачи отличается от первоначального.");
@@ -210,5 +189,189 @@ public class InMemoryTaskManagerTest {
             assertEquals(newDescription, task.description,
                     "Описание новой версии задачи отличается от нового описания.");
         }
+    }
+
+    //Блок тестирования epicAdmin
+    @Test
+    public void shouldHoldObjectsSubTaskAndEpic() {
+        int epicCode = 1;
+        String errorMessage = "Типы подзадач не совпадают с прогнозными";
+        ArrayList<Task> currentList = new ArrayList<>();
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        epicAdmin.addToArray(currentList, subTask);
+        Epic epic = inMemoryTaskManager.epicList.get(2);
+        epicAdmin.addToArray(currentList, epic);
+        epicAdmin.put(epicCode, currentList);
+        currentList = epicAdmin.getEpicsSubTasksList(epicCode);
+        boolean resoult = (currentList.get(0) instanceof SubTask) && (currentList.get(1) instanceof Epic);
+        assertEquals(true, resoult, errorMessage);
+    }
+
+    @Test
+    public void testingIfAddObjectsInEpicCorrectlyWorks() {
+        //для тестов генерируем пустой эпик
+        inMemoryTaskManager.createEpic("Test epic", "Generated for epicAdmin testing", 0);
+        int epicCode = inMemoryTaskManager.getEpicCounter();
+        ArrayList<Task> currentList = new ArrayList<>();
+        epicAdmin.put(epicCode, currentList);
+        String errorMessage = "Подзадача не добавилась в пустой эпик.";
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        boolean resoult = epicAdmin.addSubTaskInEpic(epicCode, subTask, 5);
+        assertEquals(true, resoult, errorMessage);
+
+        //Добавляем еще две подзадачи
+        subTask = inMemoryTaskManager.subTasksList.get(2);
+        resoult = epicAdmin.addSubTaskInEpic(epicCode, subTask, 0);
+        errorMessage = "Подзадача не добавилась в существующий список.";
+        assertEquals(true, resoult, errorMessage);
+
+        errorMessage = "Подзадача добавилась не в начало списка подзадач.";
+        currentList = epicAdmin.getEpicsSubTasksList(epicCode);
+        resoult = (currentList.get(0).code == 2);
+        assertEquals(true, resoult, errorMessage);
+
+        subTask = inMemoryTaskManager.subTasksList.get(3);
+        epicAdmin.addSubTaskInEpic(epicCode, subTask, 1);
+        errorMessage = "Подзадача добавилась не в середину списка подзадач.";
+        currentList = epicAdmin.getEpicsSubTasksList(epicCode);
+        resoult = (currentList.get(1).code == 3);
+        assertEquals(true, resoult, errorMessage);
+
+        int listSize = currentList.size();
+        errorMessage = "Количество подзадач в списке не соответствует ожидаемому.";
+        assertEquals(3, listSize, errorMessage);
+    }
+
+    @Test
+    public void testingIfEpicCorrectlyAddAsSubTask() {
+        //Вначале создаем два эпика и заносим в них по три подзадачи
+        int epicCode1 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode1, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList1 = new ArrayList<>();
+        epicAdmin.put(epicCode1,currentList1);
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(2);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(3);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 2);
+
+        int epicCode2 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode2, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList2 = new ArrayList<>();
+        epicAdmin.put(epicCode2,currentList2);
+        subTask = inMemoryTaskManager.subTasksList.get(4);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(5);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(6);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 2);
+        Epic epic1 = inMemoryTaskManager.epicList.get(epicCode1);
+        boolean resoult = epicAdmin.addSubTaskInEpic(epicCode2, epic1, 2);
+        String errorMessage = "Эпик " + epicCode1 + " не добавлен";
+        assertEquals(true, resoult, errorMessage);
+        currentList2 = epicAdmin.getEpicsSubTasksList(epicCode2);
+        errorMessage = "Эпик " + epicCode1 + " не занесен на нужное место";
+        String testString = "Test epic #" + epicCode1;
+        resoult = (currentList2.get(2).name.equals(testString));
+        assertEquals(true, resoult, errorMessage);
+    }
+
+    @Test
+    public void shouldNotAddEpicToOneselfAddAsSubTask() {
+        //Вначале создаем два эпика и заносим в них по три подзадачи
+        int epicCode1 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode1, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList1 = new ArrayList<>();
+        epicAdmin.put(epicCode1,currentList1);
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(2);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(3);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 2);
+
+        int epicCode2 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode2, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList2 = new ArrayList<>();
+        epicAdmin.put(epicCode2,currentList2);
+        subTask = inMemoryTaskManager.subTasksList.get(4);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(5);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(6);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 2);
+        Epic epic1 = inMemoryTaskManager.epicList.get(epicCode1);
+        epicAdmin.addSubTaskInEpic(epicCode2, epic1, 2);
+
+        //Пробуем в эпик epicCode1 добавить его же как подзадачу
+        boolean resoult = epicAdmin.addSubTaskInEpic(epicCode1, epic1, 0);
+        String errorMessage = "Эпик " + epicCode1 + " добавлен к самому себе в качестве подзадачи";
+        assertEquals(false, resoult, errorMessage);
+    }
+
+    @Test
+    public void shouldNotAddEpicThanWouldRecursiveOwnSubTask() {
+        //Тест для проверки опосредованного возникновения ситуации "Эпик является своей подзадачей".
+        //В эпике epicCode2 есть подзадача эпик epicCode1. В эпик epicCode3 добавляем как подзадачу
+        //эпик epicCode2 и пытаемся добавить эпик epicCode3 подзадачей в эпик epicCode1.
+        //Получаем Эпик1 хочет взять подзадачей Эпик3, у которого подзадача Эпик2, у которого подзадача Эпик1.
+        //Добавление должно быть запрещено
+        //Вначале создаем два эпика и заносим в них по три подзадачи
+        int epicCode1 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode1, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList1 = new ArrayList<>();
+        epicAdmin.put(epicCode1,currentList1);
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(2);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(3);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 2);
+
+        int epicCode2 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode2, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList2 = new ArrayList<>();
+        epicAdmin.put(epicCode2,currentList2);
+        subTask = inMemoryTaskManager.subTasksList.get(4);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 0);
+        subTask = inMemoryTaskManager.subTasksList.get(5);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 1);
+        subTask = inMemoryTaskManager.subTasksList.get(6);
+        epicAdmin.addSubTaskInEpic(epicCode2, subTask, 2);
+        Epic epic1 = inMemoryTaskManager.epicList.get(epicCode1);
+        //Epic1 добавляем подзадачей в Epic2
+        epicAdmin.addSubTaskInEpic(epicCode2, epic1, 0);
+
+        int epicCode3 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode3, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList3 = new ArrayList<>();
+        epicAdmin.put(epicCode3,currentList3);
+        Epic epic2 = inMemoryTaskManager.epicList.get(epicCode2);
+        Epic epic3 = inMemoryTaskManager.epicList.get(epicCode3);
+        //Epic2 добавляем подзадачей в Epic3
+        epicAdmin.addSubTaskInEpic(epicCode3, epic2, 0);
+        //И пытаемся Epic3 добавить подзадачей в Epic1
+        boolean resoult = epicAdmin.addSubTaskInEpic(epicCode1, epic3, 0);
+        String errorMessage = "Эпик " + epicCode1 + " опосредованно добавлен к самому себе в качестве подзадачи";
+        assertEquals(false, resoult, errorMessage);
+    }
+
+    @Test
+    public void shouldEpicAdminClearHisMap() {
+        //для проверки создаем epic и заносим его в Map
+        int epicCode1 = inMemoryTaskManager.getEpicCounter() + 1;
+        inMemoryTaskManager.createEpic("Test epic #" + epicCode1, "Generated for epicAdmin testing", 0);
+        ArrayList<Task> currentList1 = new ArrayList<>();
+        epicAdmin.put(epicCode1,currentList1);
+        SubTask subTask = inMemoryTaskManager.subTasksList.get(1);
+        epicAdmin.addSubTaskInEpic(epicCode1, subTask, 0);
+        boolean resoult = epicAdmin.isEpicAdminEmpty();
+        String errorMessage = "EpicAdmin в данный момент не пуст";
+        assertEquals(false, resoult, errorMessage);
+        epicAdmin.deleteAllEpics();
+        resoult = epicAdmin.isEpicAdminEmpty();
+        errorMessage = "EpicAdmin в данный момент пуст.";
+        assertEquals(true, resoult, errorMessage);
     }
 }

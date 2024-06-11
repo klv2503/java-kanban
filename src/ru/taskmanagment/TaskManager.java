@@ -1,7 +1,5 @@
 package ru.taskmanagment;
 
-import java.util.ArrayList;
-
 public interface TaskManager {
 
     // Операции с задачами
@@ -15,7 +13,7 @@ public interface TaskManager {
 
     void printTaskList();
 
-    void removeTaskWithId(int id);
+    void removeTaskWithId(int taskId);
 
     void deleteAllTasks();
 
@@ -43,7 +41,7 @@ public interface TaskManager {
 
     void countEpicStatus(Integer id);
 
-    boolean deleteEpicsSubTask(Integer epicNum, Integer subTaskNum);
+    boolean deleteEpicsSubTask(Integer epicId, Integer subTaskNum);
 
     void deleteAllEpicsSubTask(Integer id);
 
@@ -55,9 +53,6 @@ public interface TaskManager {
 
     void deleteAllSubTasks();
 
-    //Обобщенная очистка списков
-    <T extends Task> boolean isListNotEmpty(ArrayList<T> currentArray);
-
-    <T extends Task> void addEpicToEpic(ArrayList<T> currentList, Integer dependEpic);
+//    void addEpicToEpic(ArrayList<SubTask> currentList, Integer dependEpic);
 
 }
