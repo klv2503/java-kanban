@@ -21,38 +21,34 @@ public interface TaskManager {
 
     //Операции с эпиками
 
-    boolean isEpicExist(Integer code);
+    boolean isEpicExist(Integer epicId);
 
     void createEpic(String name, String description, int subTasksNumber);
 
-    //ArrayList<Task> createEpicSubTasks(Integer howTasksInEpic);
+    Epic getEpicByCode(Integer epicId);
 
-    Epic getEpicByCode(Integer code);
+    void printEpicByCode(Integer epicId);
 
-    void printEpicByCode(Integer code);
-
-    void printEpicsTasks(Integer code);
+    void printEpicsTasks(Integer epicId);
 
     void addNewSubToEpic(Integer epicId, Integer taskId, Integer place);
 
-    int getHowSubTasks(Integer code);
+    int getHowSubTasks(Integer epicId);
 
-    SubTask getEpicsSubTaskByNumber(Integer epicCode, Integer subTaskNumber);
+    SubTask getEpicsSubTaskByIndex(Integer epicCode, Integer index);
 
-    void countEpicStatus(Integer id);
+    void countEpicStatus(Integer epicId);
 
-    boolean deleteEpicsSubTask(Integer epicId, Integer subTaskNum);
+    boolean deleteEpicsSubTask(Integer epicId, Integer index);
 
-    void deleteAllEpicsSubTask(Integer id);
+    void deleteAllEpicsSubTask(Integer epicId);
 
-    void deleteEpic(Integer id);
+    void deleteEpic(Integer epicId);
 
     void deleteAllEpics();
 
     void printEpicList();
 
     void deleteAllSubTasks();
-
-//    void addEpicToEpic(ArrayList<SubTask> currentList, Integer dependEpic);
 
 }

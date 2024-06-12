@@ -103,17 +103,17 @@ public class Main {
 
         // Test 2.4 Операции с подзадачами
         // Тест 2.4.1
-        System.out.println("Эпики Тест 4.1: Изменить в эпике name у первых двух его подзадач статусы:");
+        System.out.println("Эпики Тест 4.1: Изменить в эпике name у двух его подзадач статусы:");
         id = inMemoryTaskManager.getSpecificEpic(); //ищем эпик, у которого больше двух подзадач, берем первый попавшийся
         // Примечание: из-за того, что число подзадач случайно, возможно отсутствие нужного эпика
-        if (id > 0) {
+        if (id >= 0) {
             workEpic = inMemoryTaskManager.getEpicByCode(id);
             System.out.println("Исходный эпик:");
             inMemoryTaskManager.printEpicByCode(id);
-            System.out.println("Эпик с новыми задачами:");
             inMemoryTaskManager.changeSubTaskStatus(id, 1, Status.DONE);
             inMemoryTaskManager.changeSubTaskStatus(id, 2, Status.IN_PROGRESS);
         }
+        System.out.println("Эпик с новыми задачами:");
         inMemoryTaskManager.printEpicByCode(id);
         waitEnter();
 
@@ -163,26 +163,25 @@ public class Main {
         inMemoryTaskManager.printEpicByCode(id);
         waitEnter();
 
-        /* Специальный тест: пробуем добавить эпик как подзадачу в эпик
-        System.out.println("Специальный тест: пробуем добавить эпик как подзадачу в эпик");
-        System.out.println("Исходный эпик:");
-        id = 2;
-        int id2 = 3;
-        inMemoryTaskManager.printEpicByCode(id);
-        inMemoryTaskManager.addEpicAsSubTask(id, id2);
-        System.out.println("Тот же эпик после добавления:");
-        inMemoryTaskManager.printEpicByCode(id);
-        waitEnter(); */
-
         // Тест 2.4.6 выбрать подзадачу у конкретного эпика
-        System.out.println("Эпики Тест 4.7: Получаем подзадачу конкретного эпика по ее номеру в эпике");
+        System.out.println("Эпики Тест 4.7.1: Получаем подзадачу конкретного эпика по ее номеру в эпике");
         id = 2;
         int idSubTask = 5;
-        SubTask tstSubTask = inMemoryTaskManager.getEpicsSubTaskByNumber(id, idSubTask);
+        SubTask tstSubTask = inMemoryTaskManager.getEpicsSubTaskByIndex(id, idSubTask);
         if (tstSubTask == null) {
-            System.out.println("Нет эпика с кодом " + id + " или его подзадачи " + idSubTask);
+            System.out.println("Нет эпика с кодом " + id + " или в нем нет подзадачи по индексу " + idSubTask);
         } else {
             System.out.println(tstSubTask);
+        }
+        System.out.println("Эпики Тест 4.7.2: Получаем подзадачу конкретного эпика по ее Id");
+        id = 4;
+        idSubTask = 8;
+        int index = inMemoryTaskManager.seekSubTaskInEpic(id, idSubTask);
+        if (index == -1) {
+            System.out.println("Нет эпика с кодом " + id + " или в нем нет подзадачи с кодом " + idSubTask);
+        } else {
+            SubTask subTask = inMemoryTaskManager.getEpicsSubTaskByIndex(id, index);
+            System.out.println(subTask);
         }
         System.out.println("Выводим историю просмотров.");
         inMemoryTaskManager.printHistory();
@@ -194,7 +193,7 @@ public class Main {
         System.out.println("Планируем удалить эпик с кодом " + id + " его текущее состояние:");
         inMemoryTaskManager.printEpicByCode(id);
         inMemoryTaskManager.deleteEpic(id);
-        System.out.println("Пытаемся вывести на экран эпик № " + id);
+        System.out.println("Пытаемся после удаления вывести на экран эпик № " + id);
         inMemoryTaskManager.printEpicByCode(id);
         waitEnter();
 
