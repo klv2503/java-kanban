@@ -77,17 +77,17 @@ public class Epic extends Task {
         return isSuccess;
     }
 
-    public void deleteAllEpicsSubTasksById(Integer subTaskId) {
+    public void deleteAllEpicsSubTasksByTaskId(Integer taskId) {
         int index = 0;
         while (index >= 0) {
-            index = seekFirstSubTaskByID(subTaskId);
+            index = seekFirstSubTaskByID(taskId);
             if ( index >= 0 ) {
                 epicsTasks.remove(index);
             }
         }
     }
 
-    public void deleteAllEpicsSubTasks() {
+    public void clearEpicsSubTasks() {
         epicsTasks = new ArrayList<>();
         epicStatus = Status.NEW;
     }
@@ -102,26 +102,26 @@ public class Epic extends Task {
 
     public int seekFirstSubTaskByID(Integer subTaskId) {
         //Если в списке нет подзадачи с subTaskId выдаем результат -1
-        int resoult = -1;
+        int result = -1;
         for (int i = 0; i < epicsTasks.size(); i++) {
             if (epicsTasks.get(i).code == subTaskId) {
-                resoult = i;
+                result = i;
                 break;
             }
         }
-        return resoult;
+        return result;
     }
 
-    public ArrayList<Integer> seekSubTasksIndexesById(Integer subTaskId) {
-        //В одном эпике может быть несколько экземпляров подзадачи subTaskId, выдаем список их индексов
-        //Если нет ни одного экземпляра, возвращаем пустой список
-        ArrayList<Integer> resoultArray = new ArrayList<>();
+    public ArrayList<Integer> seekSubTasksIndexesByTaskId(Integer taskId) {
+        //В одном эпике может быть несколько экземпляров подзадач, сгенерированных на основе задачи Task,
+        // выдаем список их индексов. Если нет ни одного экземпляра, возвращаем пустой список
+        ArrayList<Integer> resultArray = new ArrayList<>();
         for (int i = 0; i < epicsTasks.size(); i++) {
-            if (epicsTasks.get(i).code == subTaskId) {
-                resoultArray.add(i);
+            if (epicsTasks.get(i).code == taskId) {
+                resultArray.add(i);
             }
         }
-        return resoultArray;
+        return resultArray;
     }
 
     public boolean changeSubTaskStatusByIndex(Integer index, Status newStatus) {
@@ -140,13 +140,13 @@ public class Epic extends Task {
         return resoult;
     }
 
-    public void changeStringDataOfSubTask(SubTask subTask) {
+    public void changeStringDataOfSubTask(Task task) {
         //Меняем наименование и описание у всех экземпляров subTask
         for (int i = 0; i < epicsTasks.size(); i++) {
             SubTask editedSubTask = epicsTasks.get(i);
-            if (editedSubTask.code == subTask.code) {
-                editedSubTask.name = subTask.name;
-                editedSubTask.description = subTask.description;
+            if (editedSubTask.code == task.code) {
+                editedSubTask.name = task.name;
+                editedSubTask.description = task.description;
                 epicsTasks.set(i, editedSubTask);
             }
         }
