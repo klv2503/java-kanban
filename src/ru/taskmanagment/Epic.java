@@ -54,7 +54,7 @@ public class Epic extends Task {
                 " } ";
     }
 
-    public void addSubTaskInEndOfList(SubTask subTask){
+    public void addSubTaskInEndOfList(SubTask subTask) {
         epicsTasks.add(subTask);
     }
 
@@ -81,7 +81,7 @@ public class Epic extends Task {
         int index = 0;
         while (index >= 0) {
             index = seekFirstSubTaskByID(taskId);
-            if ( index >= 0 ) {
+            if (index >= 0) {
                 epicsTasks.remove(index);
             }
         }
