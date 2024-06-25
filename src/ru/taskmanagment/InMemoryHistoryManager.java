@@ -12,18 +12,6 @@ public class InMemoryHistoryManager implements HistoryManager {
         history = new HashMap<>();
     }
 
-    static class Node<E> {
-        public E data;
-        public Node<E> next;
-        public Node<E> prev;
-
-        public Node(Node<E> prev, E data, Node<E> next) {
-            this.data = data;
-            this.next = next;
-            this.prev = prev;
-        }
-    }
-
     private Node<Task> head;
     private Node<Task> tail;
     private int size = 0;

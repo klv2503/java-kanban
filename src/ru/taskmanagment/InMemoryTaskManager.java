@@ -263,19 +263,19 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public boolean deleteEpicsSubTask(Integer epicId, Integer index) {
+    public boolean deleteEpicsSubTask(Integer epicId, Integer stNum) {
         boolean result = false;
         if (!isEpicExist(epicId)) {
             System.out.println("Нет эпика с кодом " + epicId + " . Удаление его подзадач невозможно");
             return result;
         }
         Epic epic = epicsList.get(epicId);
-        if ((index >= 0) && (index < epic.epicsTasks.size())) {
-            int subTaskId = epic.epicsTasks.get(index).ownCode;
+        if ((stNum >= 0) && (stNum < epic.epicsTasks.size())) {
+            int subTaskId = epic.epicsTasks.get(stNum - 1).ownCode;
             String hisCode = "s" + subTaskId;
             inMemoryHistoryManager.remove(hisCode);
             subTasksList.remove(subTaskId);
-            result = epic.deleteEpicsSubTaskByIndex(index);
+            result = epic.deleteEpicsSubTaskByIndex(stNum);
         }
         return result;
     }
