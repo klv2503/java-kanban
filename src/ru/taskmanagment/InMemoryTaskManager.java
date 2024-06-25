@@ -25,7 +25,8 @@ public class InMemoryTaskManager implements TaskManager {
         return epicCounter;
     }
 
-    public void makeTask(String name, String description) {//Метод для генерации тестового списка задач
+    public void makeTask(String name, String description) {
+        //Метод для генерации тестового списка задач
         String newName = name + " " + (taskCounter + 1);
         String descript = description + " " + (taskCounter + 1);
         createTask(newName, descript);
