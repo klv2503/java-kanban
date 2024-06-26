@@ -1,5 +1,6 @@
 package ru.taskmanagment;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -12,7 +13,7 @@ public class InMemoryTaskManagerTest {
 
     static InMemoryTaskManager inMemoryTaskManager = new InMemoryTaskManager();
     static int numberOfGeneratedTasks = 10;
-    static int numberOfGeneratedEpics = 5;
+    static int numberOfGeneratedEpics = 6;
     static Random rnd = new Random();
 
     @BeforeAll
@@ -82,7 +83,7 @@ public class InMemoryTaskManagerTest {
     @Test
     public void shouldFindExistingTask8() {
         boolean tstBool = inMemoryTaskManager.isTaskExist(8);
-        assertEquals(true, tstBool, "Не нашли задачу № 8, которая должна быть в списке");
+        assertTrue(tstBool, "Не нашли задачу № 8, которая должна быть в списке");
     }
 
     @Test
@@ -120,19 +121,67 @@ public class InMemoryTaskManagerTest {
         }
     }
 
+
+    @Test
+    public void shouldTestDeletingSubTasksWithTask() {
+        //Генерация тестовых Задачи и подзадач с занесением их в историю
+        int bound = inMemoryTaskManager.getTaskCounter();
+        int id = rnd.nextInt(bound);
+        Task task = inMemoryTaskManager.getTaskWithId(id);
+        while (task == null) {
+            id = rnd.nextInt(bound);
+            task = inMemoryTaskManager.getTaskWithId(id);
+        }
+        ArrayList<String> indexInHistory = new ArrayList<>();
+        indexInHistory.add("t" + id);
+        for (int i : inMemoryTaskManager.epicsList.keySet()) {
+            Epic epic = inMemoryTaskManager.epicsList.get(i);
+            SubTask subTask = inMemoryTaskManager.makeSubTask(task);
+            indexInHistory.add("s" + subTask.ownCode);
+            epic.addSubTaskInEpic(subTask, 0);
+            inMemoryTaskManager.getEpicsSubTaskByIndex(i, 0);
+            inMemoryTaskManager.epicsList.put(i, epic);
+        }
+        //Теперь удаляем задачу. Все ее подзадачи должны быть удалены из списка подзадач и из всех эпиков.
+        // Она и ее подзадачи также должны быть удалены из истории
+        inMemoryTaskManager.removeTaskWithId(id);
+        boolean isExist = inMemoryTaskManager.isTaskExist(id);
+        for (int i : inMemoryTaskManager.subTasksList.keySet()) {
+            isExist = isExist || (inMemoryTaskManager.subTasksList.get(i).code == id);
+        }
+        String errorMessage = "Task or SubTask didn't deleted from List";
+        assertEquals(false, isExist, errorMessage);
+        for (int i : inMemoryTaskManager.epicsList.keySet()) {
+            ArrayList<SubTask> workArray = inMemoryTaskManager.epicsList.get(i).epicsTasks;
+            for (int j = 0; j < workArray.size(); j++) {
+                SubTask subTask = workArray.get(j);
+                isExist = isExist || (subTask.code == id);
+            }
+        }
+        errorMessage = "Epics have SubTask with deleted Task";
+        assertEquals(false, isExist, errorMessage);
+        //Проверяем, удалены ли все экземпляры из истории
+        isExist = inMemoryTaskManager.inMemoryHistoryManager.history.containsKey("t" + id);
+        for (String hisCode : indexInHistory) {
+            isExist = isExist || inMemoryTaskManager.inMemoryHistoryManager.history.containsKey(hisCode);
+        }
+        errorMessage = "History has deleted Task or SubTasks";
+        assertEquals(false, isExist, errorMessage);
+    }
+
     // Блок тестирования HistoryManager
     @Test
-    public void testingMaximalSizeOfHistoryManagersArray() {
+    public void testingIfMaximalSizeOfHistoryCanBeBiggerThan10() {
         Task task;
         SubTask subTask;
         Epic epic;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             task = inMemoryTaskManager.getTaskWithId(i + 1);
             epic = inMemoryTaskManager.getEpicByCode(i + 1);
             subTask = inMemoryTaskManager.getEpicsSubTaskByIndex(i + 1, 0);
         }
-        int arraySize = inMemoryTaskManager.inMemoryHistoryManager.getHistory().size();
-        assertEquals(10, arraySize, "Size of HistoryManagers Array is not equal to 10.");
+        boolean isLonger10 = 10 < inMemoryTaskManager.inMemoryHistoryManager.getHistory().size();
+        assertTrue(isLonger10, "Size of HistoryManagers Array is not bigger than 10.");
     }
 
     @Test
@@ -163,30 +212,175 @@ public class InMemoryTaskManagerTest {
     }
 
     @Test
-    public void testingHistoryManagersArrayKeepsDifferentVersions() {
-        Task task = inMemoryTaskManager.getTaskWithId(1);
-        int code = task.code;
-        String oldName = task.name;
-        String oldDescription = task.description;
-
-        // code не меняем, т.к. тогда это будет уже другая задача, а не новая версия той же
-        String newName = "New tasks name";
-        String newDescription = "New tasks description";
-        Task newTask = new Task(code, newName, newDescription);
-        inMemoryTaskManager.renewTask(newTask);
-        task = inMemoryTaskManager.getTaskWithId(1);
-
-        ArrayList<Task> currentArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
-        if (!currentArray.isEmpty()) {
-            int arraySize = currentArray.size() - 1;
-            task = currentArray.get(arraySize - 1);
-            assertEquals(oldName, task.name, "Имя старой версии задачи отличается от первоначального.");
-            assertEquals(oldDescription, task.description,
-                    "Описание старой версии задачи отличается от первоначального.");
-            task = currentArray.get(arraySize);
-            assertEquals(newName, task.name, "Имя новой версии задачи отличается от заново заданного.");
-            assertEquals(newDescription, task.description,
-                    "Описание новой версии задачи отличается от нового описания.");
+    public void testingIfHistoryCanHaveTwiceOneObject() {
+        Task task;
+        SubTask subTask;
+        Epic epic;
+        for (int i = 0; i < 4; i++) {
+            task = inMemoryTaskManager.getTaskWithId(i + 1);
+            epic = inMemoryTaskManager.getEpicByCode(i + 1);
+            subTask = inMemoryTaskManager.getEpicsSubTaskByIndex(i + 1, 1);
         }
+        // Вызываем get для объектов, которые только что занесены в историю
+        subTask = inMemoryTaskManager.getEpicsSubTaskByIndex(1, 1);
+        epic = inMemoryTaskManager.getEpicByCode(2);
+        task = inMemoryTaskManager.getTaskWithId(3);
+
+        int counterSub = 0;
+        int counterEpic = 0;
+        int counterTask = 0;
+        ArrayList<Task> currentArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        for (int i = 0; i < currentArray.size(); i++) {
+            if (currentArray.get(i) instanceof SubTask) {
+                if (((SubTask) currentArray.get(i)).ownCode == subTask.ownCode)
+                    counterSub++;
+            }
+            if (currentArray.get(i) instanceof Epic) {
+                if (currentArray.get(i).code == epic.code)
+                    counterEpic++;
+            }
+            if (!(currentArray.get(i) instanceof SubTask) && !(currentArray.get(i) instanceof Epic)) {
+                if (currentArray.get(i).code == task.code)
+                    counterTask++;
+            }
+        }
+        String errorMessage = "HistoryManager keep twice Task #3";
+        assertEquals(1, counterTask, errorMessage);
+        errorMessage = "HistoryManager keep twice SUbTask #1 of Epic #1";
+        assertEquals(1, counterSub, errorMessage);
+        errorMessage = "HistoryManager keep twice Epic #2";
+        assertEquals(1, counterEpic, errorMessage);
+    }
+
+    @Test
+    public void shouldTestIfTaskAndAllSubTasksAreInHistory() {
+        //Генерация данных для теста
+        int bound = inMemoryTaskManager.getTaskCounter();
+        int id = rnd.nextInt(bound);
+        ArrayList<String> indexes = new ArrayList<>();
+        Task task = inMemoryTaskManager.getTaskWithId(id);
+        while (task == null) {
+            id = rnd.nextInt(bound);
+            task = inMemoryTaskManager.getTaskWithId(id);
+        }
+        indexes.add("t" + id);
+
+        for (int i : inMemoryTaskManager.epicsList.keySet()) {
+            Epic epic = inMemoryTaskManager.epicsList.get(i);
+            SubTask subTask = inMemoryTaskManager.makeSubTask(task);
+            epic.addSubTaskInEpic(subTask, 0);
+            subTask = inMemoryTaskManager.getEpicsSubTaskByIndex(i, 0);
+            indexes.add("s" + subTask.ownCode);
+        }
+        //Проверка, находятся ли Task и все сгенерированные для теста SubTask в истории
+        boolean isSaved = true;
+        for (String i : indexes) {
+            isSaved = isSaved && inMemoryTaskManager.inMemoryHistoryManager.history.containsKey(i);
+        }
+        String errorMessage = "HistoryManager keep not Task or not all SubTasks";
+        assertEquals(true, isSaved, errorMessage);
+    }
+
+    @Test
+    public void shouldCorrectAddTaskInClearHistoryAndDeleteSingleTask() {
+        //Чистим историю и проверяем, получилось ли
+        inMemoryTaskManager.inMemoryHistoryManager.removeAllHistory();
+        ArrayList<Task> workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        boolean isClear = workArray.isEmpty();
+        String errorMessage = "History must be empty, but has elements";
+        assertEquals(true, isClear, errorMessage);
+        //Добавляем в историю одну задачу и проверяем, не осталась ли история пустой
+        int bound = inMemoryTaskManager.getTaskCounter();
+        int id = rnd.nextInt(bound);
+        Task task = inMemoryTaskManager.getTaskWithId(id);
+        while (task == null) {
+            id = rnd.nextInt(bound);
+            task = inMemoryTaskManager.getTaskWithId(id);
+        }
+        workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        isClear = workArray.isEmpty();
+        errorMessage = "History must have one element, but is empty";
+        assertEquals(false, isClear, errorMessage);
+        //Проверяем, что в истории ровно один элемент
+        boolean isOnlyOne = false;
+        if (!workArray.isEmpty()) {
+            isOnlyOne = (workArray.size() == 1);
+        }
+        errorMessage = "History must have only one element, but has more";
+        assertEquals(true, isOnlyOne, errorMessage);
+        //Проверяем, действительно ли в историю записана именно запрошенная задача
+        boolean isCorrectTask = (workArray.get(0).equals(inMemoryTaskManager.tasksList.get(id)));
+        errorMessage = "In History written another Task";
+        assertEquals(true, isCorrectTask, errorMessage);
+        //Удаляем единственную задачу из истории
+        inMemoryTaskManager.inMemoryHistoryManager.remove("t" + id);
+        workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        isClear = workArray.isEmpty();
+        errorMessage = "History must be empty again, but has elements";
+        assertEquals(true, isClear, errorMessage);
+    }
+
+    @Test
+    public void shouldHistoryCorrectDeleteTaskAndAddAfterSecondGet() {
+// Очищаем историю и заполняем ее тестовыми задачами
+        ArrayList<Task> taskForTest = new ArrayList<>();
+        inMemoryTaskManager.inMemoryHistoryManager.removeAllHistory();
+        for (int i = 0; i < 10; i++) {
+            inMemoryTaskManager.createTask("TestName" + i, "TestDesc" + i);
+            Task task = inMemoryTaskManager.getTaskWithId(inMemoryTaskManager.getTaskCounter());
+            taskForTest.add(task);
+        }
+        //Удаляем задачу TestName2 (из середины списка)
+        int id = taskForTest.get(2).code;
+        inMemoryTaskManager.removeTaskWithId(id);
+        ArrayList<Task> workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        boolean isCorrect = !workArray.isEmpty();
+        if (isCorrect) {
+            isCorrect = isCorrect && (workArray.size() == 9);
+        }
+        String errorMessage = "History must have 9 elements";
+        assertEquals(true, isCorrect, errorMessage);
+        isCorrect = (workArray.get(0).equals(taskForTest.get(0))) &&
+                (workArray.get(1).equals(taskForTest.get(1)));
+        for (int i = 2; i < 9; i++) {
+            isCorrect = isCorrect && (workArray.get(i).equals(taskForTest.get(i + 1)));
+        }
+        errorMessage = "Unexpected History";
+        assertEquals(true, isCorrect, errorMessage);
+
+        //Теперь удаляем задачу из хвоста списка
+        id = taskForTest.get(9).code;
+        inMemoryTaskManager.removeTaskWithId(id);
+        workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        isCorrect = !workArray.isEmpty();
+        if (isCorrect) {
+            isCorrect = isCorrect && (workArray.size() == 8);
+        }
+        errorMessage = "History must have 8 elements";
+        assertEquals(true, isCorrect, errorMessage);
+        isCorrect = (workArray.get(0).equals(taskForTest.get(0))) &&
+                (workArray.get(1).equals(taskForTest.get(1)));
+        for (int i = 2; i < 8; i++) {
+            isCorrect = isCorrect && (workArray.get(i).equals(taskForTest.get(i + 1)));
+        }
+        errorMessage = "Unexpected History after deleting from tail";
+        assertEquals(true, isCorrect, errorMessage);
+
+        //Повторно просматриваем задачу TestName0
+        inMemoryTaskManager.getTaskWithId(taskForTest.get(0).code);
+        workArray = inMemoryTaskManager.inMemoryHistoryManager.getHistory();
+        isCorrect = !workArray.isEmpty();
+        if (isCorrect) {
+            isCorrect = isCorrect && (workArray.size() == 8);
+        }
+        errorMessage = "History must have 8 elements";
+        assertEquals(true, isCorrect, errorMessage);
+        isCorrect = (workArray.get(7).equals(taskForTest.get(0))) &&
+                (workArray.get(0).equals(taskForTest.get(1)));
+        for (int i = 2; i < 7; i++) {
+            isCorrect = isCorrect && (workArray.get(i).equals(taskForTest.get(i + 2)));
+        }
+        errorMessage = "Unexpected History after second GetTask";
+        assertEquals(true, isCorrect, errorMessage);
     }
 }

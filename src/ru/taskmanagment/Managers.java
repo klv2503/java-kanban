@@ -12,5 +12,5 @@ public class Managers {
 
     static InMemoryHistoryManager getDefaultHistory() {
         return new InMemoryHistoryManager();
-    };
+    }
 }
