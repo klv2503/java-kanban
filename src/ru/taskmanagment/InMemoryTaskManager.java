@@ -4,14 +4,13 @@ import java.util.*;
 
 public class InMemoryTaskManager implements TaskManager {
 
-    private static int taskCounter = 0;
-    private static int subTaskCounter = 0;
-    private static int epicCounter = 0;
+    protected static int taskCounter = 0;
+    protected static int subTaskCounter = 0;
+    protected static int epicCounter = 0;
     static Map<Integer, Task> tasksList = new HashMap<>();
     static Map<Integer, SubTask> subTasksList = new HashMap<>();
     static Map<Integer, Epic> epicsList = new HashMap<>();
     static InMemoryHistoryManager inMemoryHistoryManager = Managers.getDefaultHistory();
-
     // переменные для контроля истории просмотров
     int getTaskCall = 0;
     int getSubTaskCall = 0;
@@ -25,6 +24,10 @@ public class InMemoryTaskManager implements TaskManager {
         return epicCounter;
     }
 
+    public static int getSubTaskCounter() {
+        return subTaskCounter;
+    }
+
     public void makeTask(String name, String description) {
         //Метод для генерации тестового списка задач
         String newName = name + " " + (taskCounter + 1);
@@ -33,11 +36,6 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     // Группа методов работы с задачами
-    @Override
-    public boolean isTaskExist(Integer code) {
-        return tasksList.containsKey(code);
-    }
-
     @Override
     public void createTask(String name, String description) {
         Task genTask = new Task(++taskCounter, name, description);
@@ -59,7 +57,7 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void renewTask(Task task) {
-        if (isTaskExist(task.code)) {
+        if (tasksList.containsKey(task.code)) {
             tasksList.put(task.code, task);
             for (int i : subTasksList.keySet()) {
                 if (subTasksList.get(i).code == task.code) {
@@ -100,7 +98,7 @@ public class InMemoryTaskManager implements TaskManager {
     public void removeTaskWithId(int taskId) {
         //Вместе с задачей удаляются созданные на ее основе подзадачи, их использование в эпиках
         // сама задача и удаленные подзадачи удаляются также из истории просмотров
-        if (isTaskExist(taskId)) {
+        if (tasksList.containsKey(taskId)) {
             String hisCode;
             for (int epicId : epicsList.keySet()) {
                 ArrayList<Integer> subTaskIndexes = new ArrayList<>();
@@ -131,11 +129,6 @@ public class InMemoryTaskManager implements TaskManager {
         epicsList.clear();
         epicCounter = 0;
         inMemoryHistoryManager.removeAllHistory();
-    }
-
-    @Override
-    public boolean isSubTaskExist(Integer code) {
-        return subTasksList.containsKey(code);
     }
 
 // Конец группы методов работы с задачами
@@ -188,7 +181,7 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void printEpicByCode(Integer epicId) {
-        if (isEpicExist(epicId)) {
+        if (epicsList.containsKey(epicId)) {
             System.out.println(epicsList.get(epicId));
             printEpicsTasks(epicId);
         } else {
@@ -199,7 +192,7 @@ public class InMemoryTaskManager implements TaskManager {
     public int seekSubTaskInEpic(int epicId, int subTaskId) {
         //Если подзадача не выполняется в рамках эпика, то результат -1
         int resoult = -1;
-        if (isEpicExist(epicId)) {
+        if (epicsList.containsKey(epicId)) {
             resoult = epicsList.get(epicId).seekFirstSubTaskByID(subTaskId);
         }
         return resoult;
@@ -207,7 +200,7 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void printEpicsTasks(Integer epicId) {
-        if (isEpicExist(epicId)) {
+        if (epicsList.containsKey(epicId)) {
             Epic epic = epicsList.get(epicId);
             ArrayList<SubTask> currentList = epic.getEpicsTasks();
             if (!currentList.isEmpty()) {
@@ -220,11 +213,6 @@ public class InMemoryTaskManager implements TaskManager {
         } else {
             System.out.println("Эпик с кодом " + epicId + " не существует.");
         }
-    }
-
-    @Override
-    public boolean isEpicExist(Integer epicId) {
-        return epicsList.containsKey(epicId);
     }
 
     @Override
@@ -248,15 +236,19 @@ public class InMemoryTaskManager implements TaskManager {
         }
     }
 
-    public static void changeSubTaskStatus(Integer epicId, Integer subNumber, Status newStat) {
+    @Override
+    public void changeSubTaskStatus(Integer epicId, Integer subNumber, Status newStat) {
         if (epicsList.containsKey(epicId)) {
-            epicsList.get(epicId).changeSubTaskStatusByIndex(subNumber, newStat);
+            Epic epic = epicsList.get(epicId);
+            if (epic.changeSubTaskStatusByIndex(subNumber, newStat)) {
+                recountEpicStatus(epicId);
+            }
         }
     }
 
     @Override
-    public void countEpicStatus(Integer epicId) {
-        if (!isEpicExist(epicId)) {
+    public void recountEpicStatus(Integer epicId) {
+        if (!epicsList.containsKey(epicId)) {
             System.out.println("Нет эпика с кодом " + epicId);
             return;
         }
@@ -265,25 +257,28 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public boolean deleteEpicsSubTask(Integer epicId, Integer stNum) {
+        //stNum - номер подзадачи согласно внутренней нумерации подзадач в данном эпике от 1
         boolean result = false;
-        if (!isEpicExist(epicId)) {
+        if (!epicsList.containsKey(epicId)) {
             System.out.println("Нет эпика с кодом " + epicId + " . Удаление его подзадач невозможно");
             return result;
         }
         Epic epic = epicsList.get(epicId);
-        if ((stNum >= 0) && (stNum < epic.epicsTasks.size())) {
+        if ((stNum > 0) && (stNum <= epic.epicsTasks.size())) {
             int subTaskId = epic.epicsTasks.get(stNum - 1).ownCode;
             String hisCode = "s" + subTaskId;
             inMemoryHistoryManager.remove(hisCode);
             subTasksList.remove(subTaskId);
-            result = epic.deleteEpicsSubTaskByIndex(stNum);
+            result = epic.deleteEpicsSubTaskByIndex(stNum - 1);
+            if (result)
+                epic.countEpicStatus();
         }
         return result;
     }
 
     @Override
     public void deleteAllEpicsSubTask(Integer epicId) {
-        if (!isEpicExist(epicId)) {
+        if (!epicsList.containsKey(epicId)) {
             System.out.println("Нет эпика с кодом " + epicId + " . Удаление его подзадач невозможно");
             return;
         }
@@ -304,7 +299,7 @@ public class InMemoryTaskManager implements TaskManager {
         if (index < 0) {
             return currentSubTask;
         }
-        if (isEpicExist(epicCode)) {
+        if (epicsList.containsKey(epicCode)) {
             currentSubTask = epicsList.get(epicCode).getSubTaskByIndex(index);
         }
         if (!(currentSubTask == null)) {
@@ -317,11 +312,11 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void addNewSubToEpic(Integer epicId, Integer taskId, Integer place) {
-        if (!isEpicExist(epicId)) {
+        if (!epicsList.containsKey(epicId)) {
             System.out.println("Нет эпика с кодом " + epicId);
             return;
         }
-        if (!isTaskExist(taskId)) {
+        if (!tasksList.containsKey(taskId)) {
             System.out.println("Нет задачи с кодом " + taskId);
             return;
         }
@@ -332,7 +327,7 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public void deleteEpic(Integer epicId) {
-        if (isEpicExist(epicId)) {
+        if (epicsList.containsKey(epicId)) {
             deleteAllEpicsSubTask(epicId);
             String hisId = "e" + epicId;
             inMemoryHistoryManager.remove(hisId);
@@ -350,6 +345,7 @@ public class InMemoryTaskManager implements TaskManager {
                 deleteAllEpicsSubTask(code);
             }
         }
+        subTasksList.clear();
     }
 
     @Override
@@ -384,5 +380,4 @@ public class InMemoryTaskManager implements TaskManager {
         }
         return -1;
     }
-
 }

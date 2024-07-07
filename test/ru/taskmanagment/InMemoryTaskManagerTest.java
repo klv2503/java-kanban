@@ -33,7 +33,7 @@ public class InMemoryTaskManagerTest {
     @Test
     public void shouldCreateTaskManagerAndSomethingDone() {
         TaskManager taskManager = Managers.getDefault();
-        boolean tstBool = taskManager.isEpicExist(2);
+        boolean tstBool = taskManager.getHowSubTasks(2) > 0;
         assertEquals(true, tstBool, "taskManager не нашёл эпика № 2");
     }
 
@@ -82,13 +82,13 @@ public class InMemoryTaskManagerTest {
 
     @Test
     public void shouldFindExistingTask8() {
-        boolean tstBool = inMemoryTaskManager.isTaskExist(8);
+        boolean tstBool = inMemoryTaskManager.tasksList.containsKey(8);
         assertTrue(tstBool, "Не нашли задачу № 8, которая должна быть в списке");
     }
 
     @Test
     public void shouldNotFindTask50() {
-        boolean tstBool = inMemoryTaskManager.isTaskExist(50);
+        boolean tstBool = inMemoryTaskManager.tasksList.containsKey(50);
         assertFalse(tstBool, "Задача найдена, хотя ее не должно быть.");
     }
 
@@ -145,7 +145,7 @@ public class InMemoryTaskManagerTest {
         //Теперь удаляем задачу. Все ее подзадачи должны быть удалены из списка подзадач и из всех эпиков.
         // Она и ее подзадачи также должны быть удалены из истории
         inMemoryTaskManager.removeTaskWithId(id);
-        boolean isExist = inMemoryTaskManager.isTaskExist(id);
+        boolean isExist = inMemoryTaskManager.tasksList.containsKey(id);
         for (int i : inMemoryTaskManager.subTasksList.keySet()) {
             isExist = isExist || (inMemoryTaskManager.subTasksList.get(i).code == id);
         }
@@ -383,4 +383,5 @@ public class InMemoryTaskManagerTest {
         errorMessage = "Unexpected History after second GetTask";
         assertEquals(true, isCorrect, errorMessage);
     }
+
 }
