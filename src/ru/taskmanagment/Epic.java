@@ -125,19 +125,19 @@ public class Epic extends Task {
     }
 
     public boolean changeSubTaskStatusByIndex(Integer index, Status newStatus) {
-        boolean resoult = false;
+        boolean result = false;
         if (index >= epicsTasks.size()) {
-            return resoult;
+            return result;
         }
         SubTask subTask = epicsTasks.get(index);
         if (subTask.getStatus().equals(newStatus)) {
-            return resoult;
+            return result;
         } else {
             subTask.setStatus(newStatus);
             epicsTasks.set(index, subTask);
-            resoult = true;
+            result = true;
         }
-        return resoult;
+        return result;
     }
 
     public void changeStringDataOfSubTask(Task task) {
