@@ -269,7 +269,7 @@ public class InMemoryTaskManager implements TaskManager {
             String hisCode = "s" + subTaskId;
             inMemoryHistoryManager.remove(hisCode);
             subTasksList.remove(subTaskId);
-            result = epic.deleteEpicsSubTaskByIndex(stNum-1);
+            result = epic.deleteEpicsSubTaskByIndex(stNum - 1);
             if (result)
                 epic.countEpicStatus();
         }
