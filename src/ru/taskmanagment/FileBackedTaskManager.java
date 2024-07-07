@@ -12,7 +12,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 public class FileBackedTaskManager extends InMemoryTaskManager {
 
     static Path fileName;
-    final String HOME = System.getProperty("user.home");
+    final String home = System.getProperty("user.home");
     //Пока список тупо перезаписывается при вызове метода save.
     //Скорее всего, список переделаю в двусвязную мапу по образцу хранения истории.
     static List<String> dataToSave;
@@ -22,7 +22,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     public FileBackedTaskManager(String fileToSave) {
-        fileName = Paths.get(HOME, fileToSave);
+        fileName = Paths.get(home, fileToSave);
         dataToSave = new ArrayList<>();
     }
 
