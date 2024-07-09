@@ -20,6 +20,12 @@ public class FileBackedTaskManagerTest {
         String errorMessage = "Список с состоянием менеджера не пуст";
         boolean isCorrect = fileBackedTaskManager.dataToSave.isEmpty();
         assertEquals(true, isCorrect, errorMessage);
+        fileBackedTaskManager.taskCounter = 0;
+        fileBackedTaskManager.subTaskCounter = 0;
+        fileBackedTaskManager.epicCounter = 0;
+        fileBackedTaskManager.tasksList.clear();
+        fileBackedTaskManager.subTasksList.clear();
+        fileBackedTaskManager.epicsList.clear();
         try {
             fileBackedTaskManager.fileName = Files.createTempFile("TestTmp4Manager", ".txt");
             fileBackedTaskManager.save();
