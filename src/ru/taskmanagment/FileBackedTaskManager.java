@@ -17,18 +17,15 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     //Скорее всего, список переделаю в двусвязную мапу по образцу хранения истории.
     static List<String> dataToSave;
 
-    public FileBackedTaskManager() {
-        dataToSave = new ArrayList<>();
-    }
-
     public FileBackedTaskManager(String fileToSave) {
         fileName = Paths.get(home, fileToSave);
         dataToSave = new ArrayList<>();
     }
 
-    public String toString(Task task) {
+    public String convertDataToString(Task task) {
         //Метод не знает, к какому эпику относится подзадача, его номер к строке подзадачи добавляется
-        //в save(). Из-за этого добавление "\n" (для всех - из соображений общности) тоже оставлено в save()
+        //в prepareDataToSave(). Из-за этого добавление "\n" (для всех - из соображений общности)
+        //тоже оставлено в prepareDataToSave()
         if (task instanceof Epic) {
             Epic epic = (Epic) task;
             return String.format("%d,EPIC,%s,%s,%s", epic.code, epic.name, epic.epicStatus, epic.description);
@@ -41,7 +38,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
     }
 
-    public void save() {
+    public void prepareDataToSave() {
         //В состоянии менеджера первая строка запоминает значения счетчиков. Они требуются для запуска менеджера
         //с сохраненной точки и удобнее их записать в файл, чем при чтении файла высчитывать.
         //Далее строки идут в формате id,type,name,status,description,parentTask,epic.
@@ -50,32 +47,41 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         dataToSave.clear();
         dataToSave.add(String.format("%d,%d,%d%n", taskCounter, subTaskCounter, epicCounter));
         for (int i : tasksList.keySet())
-            dataToSave.add(toString(tasksList.get(i)) + "\n");
+            dataToSave.add(convertDataToString(tasksList.get(i)) + "\n");
         for (int i : epicsList.keySet()) {
-            dataToSave.add(toString(epicsList.get(i)) + "\n");
+            dataToSave.add(convertDataToString(epicsList.get(i)) + "\n");
             for (int j = 0; j < epicsList.get(i).epicsTasks.size(); j++) {
-                dataToSave.add(toString(epicsList.get(i).epicsTasks.get(j)) + "," + i + "\n");
+                dataToSave.add(convertDataToString(epicsList.get(i).epicsTasks.get(j)) + "," + i + "\n");
             }
         }
     }
 
-    public void writeManagerState() {
-        //Первоначально этот метод и был save, списка dataToSave не существовало,
-        //а перечисления объектов были внутри этого метода. Файл перезаписывался каждый раз, что помогло в отладке.
-        //Теперь предполагается, что файл пишется один раз в конце работы программы.
-        try {
-            Path pathToTmp = Files.createTempFile("Tmp4Manager", ".txt");
-            Writer tmpWrite = new FileWriter(pathToTmp.toFile());
-            BufferedWriter bufferedWriter = new BufferedWriter(tmpWrite);
+    public void save() {
+        //Методу возвращено название save, теперь он снова пишет файл при каждом изменении в списках объектов
+        prepareDataToSave();
+        String tmpName;
+        Path pathToTmp = null;
+        try (BufferedWriter bufferedWriter = new BufferedWriter(
+                new FileWriter(tmpName = Files.createTempFile("Tmp4Manager", ".txt").toString()))) {
+            pathToTmp = Path.of(tmpName);
             for (int i = 0; i < dataToSave.size(); i++) {
                 bufferedWriter.write(dataToSave.get(i));
             }
-            bufferedWriter.close();
-            Files.copy(pathToTmp, fileName, REPLACE_EXISTING);
-            Files.delete(pathToTmp);
         } catch (Exception e) {
             try {
-                throw new ManagerSaveException("Произошла ошибка сохранения данных");
+                throw new ManagerSaveException("Произошла ошибка сохранения данных в tmp-файл");
+            } catch (ManagerSaveException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        try {
+            if (pathToTmp.toFile().exists()) {
+                Files.copy(pathToTmp, fileName, REPLACE_EXISTING);
+                Files.delete(pathToTmp);
+            }
+        } catch (Exception e) {
+            try {
+                throw new ManagerSaveException("Произошла ошибка записи данных в постоянный файл");
             } catch (ManagerSaveException ex) {
                 throw new RuntimeException(ex);
             }
@@ -136,7 +142,6 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     public static void loadFromFile(File file) {
         if (!file.exists())
             return;
-        System.out.println(file.getPath());
         try {
             dataToSave = Files.readAllLines(file.toPath());
             restoreTasks();

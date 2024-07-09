@@ -188,9 +188,6 @@ public class Main {
         System.out.println("Пытаемся после удаления вывести на экран эпик № " + id);
         manager.printEpicByCode(id);
         waitEnter();
-        //Тесты по очистке списков задач, эпиков и подзадач удалены. Иначе получали пустое состояние менеджера.
-        //Записываем в файл состояние менеджера на момент окончания работы программы
-        manager.writeManagerState();
     }
 
     public static void generateTestData(InMemoryTaskManager inMemoryTaskManager, int taskNum, int epicNum) {

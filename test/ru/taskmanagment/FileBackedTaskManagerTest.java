@@ -7,21 +7,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class FileBackedTaskManagerTest {
     //Тестируем только работу с файлами
-    static FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager();
+    static String nameOfTestFile = "file4Test.txt";
+    static FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(nameOfTestFile);
     static int numberOfGeneratedTasks = 4;
     static int numberOfGeneratedEpics = 2;
     static Random rnd = new Random();
 
     @Test
     public void testIfFileBackedTaskManagerWritesAndReadEmptyFile() {
-        FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager();
+        FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(nameOfTestFile);
         //проверяем, пуст ли массив с состоянием менеджера
         String errorMessage = "Список с состоянием менеджера не пуст";
         boolean isCorrect = fileBackedTaskManager.dataToSave.isEmpty();
         assertEquals(true, isCorrect, errorMessage);
         try {
             fileBackedTaskManager.fileName = Files.createTempFile("TestTmp4Manager", ".txt");
-            fileBackedTaskManager.writeManagerState();
+            fileBackedTaskManager.save();
         } catch (Exception e) {
             try {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
@@ -39,11 +40,14 @@ public class FileBackedTaskManagerTest {
                 throw new RuntimeException(ex);
             }
         }
-        //Поскольку в список состояния не было сделано ни одного добавления,
-        //файл должен быть пуст и размер списка должен равняться нулю
+        //Поскольку первой записью пишется состояние счетчиков,
+        //при пустых списках объектов в файле должна быть ровно одна запись, а именно "0,0,0"
         int dataSize = fileBackedTaskManager.dataToSave.size();
-        errorMessage = "Число строк в файле не равно 0";
-        assertEquals(0, dataSize, errorMessage);
+        errorMessage = "Число строк в файле не равно 1";
+        assertEquals(1, dataSize, errorMessage);
+        isCorrect = fileBackedTaskManager.dataToSave.get(0).equals("0,0,0");
+        errorMessage = "Строка состояния не соответствует ожидаемой";
+        assertEquals(true, isCorrect, errorMessage);
     }
 
     @Test
@@ -62,11 +66,10 @@ public class FileBackedTaskManagerTest {
         int expectedSize = fileBackedTaskManager.taskCounter + fileBackedTaskManager.epicCounter
                 + fileBackedTaskManager.subTaskCounter + 1;
         int realSize = fileBackedTaskManager.dataToSave.size();
-        //boolean isCorrect = fileBackedTaskManager.dataToSave.size() == expectedSize;
         assertEquals(expectedSize, realSize, errorMessage);
         try {
             fileBackedTaskManager.fileName = Files.createTempFile("TestTmp4Manager", ".txt");
-            fileBackedTaskManager.writeManagerState();
+            fileBackedTaskManager.save();
         } catch (Exception e) {
             try {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
@@ -74,8 +77,13 @@ public class FileBackedTaskManagerTest {
                 throw new RuntimeException(ex);
             }
         }
-        //После записи удаляем всё
-        fileBackedTaskManager.deleteAllTasks();
+        //После записи удаляем всё так, чтобы не было перезаписи в файл и обнуляем счетчики
+        fileBackedTaskManager.taskCounter = 0;
+        fileBackedTaskManager.subTaskCounter = 0;
+        fileBackedTaskManager.epicCounter = 0;
+        fileBackedTaskManager.tasksList.clear();
+        fileBackedTaskManager.subTasksList.clear();
+        fileBackedTaskManager.epicsList.clear();
         try {
             fileBackedTaskManager.loadFromFile(fileBackedTaskManager.fileName.toFile());
             Files.delete(fileBackedTaskManager.fileName);
@@ -86,7 +94,14 @@ public class FileBackedTaskManagerTest {
                 throw new RuntimeException(ex);
             }
         }
-        //После чтения и восстановления считаем количество экземпляров объектов
+        //После чтения и восстановления проверяем счетчики
+        errorMessage = "Значение счетчика задач не совпадает с ожидаемым";
+        assertEquals(4, fileBackedTaskManager.taskCounter, errorMessage);
+        errorMessage = "Значение счетчика подзадач не совпадает с ожидаемым";
+        assertEquals(5, fileBackedTaskManager.subTaskCounter, errorMessage);
+        errorMessage = "Значение счетчика эпиков не совпадает с ожидаемым";
+        assertEquals(2, fileBackedTaskManager.epicCounter, errorMessage);
+        // считаем и сверяем количество экземпляров объектов
         int taskNum = 0;
         for (int i : fileBackedTaskManager.tasksList.keySet())
             taskNum++;
