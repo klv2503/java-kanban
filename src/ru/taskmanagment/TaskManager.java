@@ -3,8 +3,6 @@ package ru.taskmanagment;
 public interface TaskManager {
 
     // Операции с задачами
-    boolean isTaskExist(Integer code);
-
     void createTask(String name, String description);
 
     Task getTaskWithId(int id);
@@ -17,11 +15,7 @@ public interface TaskManager {
 
     void deleteAllTasks();
 
-    boolean isSubTaskExist(Integer code);
-
     //Операции с эпиками
-
-    boolean isEpicExist(Integer epicId);
 
     void createEpic(String name, String description, int subTasksNumber);
 
@@ -37,7 +31,9 @@ public interface TaskManager {
 
     SubTask getEpicsSubTaskByIndex(Integer epicCode, Integer index);
 
-    void countEpicStatus(Integer epicId);
+    void changeSubTaskStatus(Integer epicId, Integer subNumber, Status newStat);
+
+    void recountEpicStatus(Integer epicId);
 
     boolean deleteEpicsSubTask(Integer epicId, Integer index);
 
