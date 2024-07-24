@@ -85,6 +85,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         try {
             manager.save();
         } catch (Exception e) {
+            e.printStackTrace(System.out);
             try {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
             } catch (ManagerSaveException ex) {
@@ -102,9 +103,9 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         try {
             anotherManager = manager.loadFromFile(manager.fileName);
         } catch (Exception e) {
-            System.out.println(e.toString());
+            e.printStackTrace(System.out);
             try {
-                throw new ManagerSaveException("Произошла ошибка чтения данных. Файл "
+                throw new ManagerSaveException(e.toString() + "Произошла ошибка чтения данных. Файл "
                         + anotherManager.fileName.toPath()
                         + " Старое имя " + manager.fileName.toPath());
             } catch (ManagerSaveException ex) {
