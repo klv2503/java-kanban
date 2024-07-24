@@ -100,6 +100,6 @@ public class SubTask extends Task {
                 getEndTime().format(TimeManager.dateTimeFormatter) + ",");
         return String.format("%d,SUBTASK,%s,%s,%s,", ownCode, name, status, description)
                 + str
-                + String.format("%d%n", code);
+                + code + "\n"; //String.format("%d%n", code);
     }
 }
