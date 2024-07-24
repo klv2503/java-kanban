@@ -81,6 +81,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         epicCounter = 0;
         for (int i = 1; i < dataToSave.size(); i++) {
             String str = dataToSave.get(i);
+            System.out.println("!" + str + "?");
             int beginInd = str.indexOf(",") + 1;
             int endInd = str.indexOf(",", beginInd);
             TaskTypes type = TaskTypes.valueOf(str.substring(beginInd, endInd));
