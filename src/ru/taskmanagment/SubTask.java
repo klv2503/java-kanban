@@ -18,9 +18,9 @@ public class SubTask extends Task {
     }
 
     public SubTask(Task task, int ownCode, Status status, int duration, LocalDateTime startTime) {
-        code = task.code;
-        name = task.name;
-        description = task.description;
+        this.code = task.code;
+        this.name = task.name;
+        this.description = task.description;
         this.ownCode = ownCode;
         this.status = status;
         this.startTime = startTime;
