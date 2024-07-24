@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -18,7 +19,9 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
 
     @AfterAll
     public static void deleteTmpFile() throws IOException {
-        if (nameOfTestFile.exists()) Files.delete(nameOfTestFile.toPath());
+        if (nameOfTestFile.exists()) {
+            Files.delete(nameOfTestFile.toPath());
+        }
     }
     
     @Test
