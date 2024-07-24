@@ -114,12 +114,12 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
     }
 
-    public static void loadFromFile(File file) {
+    public static FileBackedTaskManager loadFromFile(File file) {
         //Выяснилось, что я прозевал сигнатуру метода. Переделал под требования ТЗ к спринту7
-        if (file.exists())
+        FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(file);
+        if (file.exists()) {
             try {
-                dataToSave = Files.readAllLines(file.toPath());
-                restoreTasks();
+                fileBackedTaskManager.dataToSave = Files.readAllLines(file.toPath());
             } catch (Exception e) {
                 try {
                     throw new ManagerSaveException("Произошла ошибка чтения данных");
@@ -127,6 +127,9 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
                     throw new RuntimeException(ex);
                 }
             }
+            fileBackedTaskManager.restoreTasks();
+        }
+        return fileBackedTaskManager;
     }
 
     @Override

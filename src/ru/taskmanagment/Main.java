@@ -9,12 +9,11 @@ public class Main {
 
     public static void main(String[] args) {
         File fileName = Paths.get(System.getProperty("user.home"), "managesaver.txt").toFile();
-        FileBackedTaskManager manager = new FileBackedTaskManager(fileName);
+        FileBackedTaskManager manager = FileBackedTaskManager.loadFromFile(fileName);
         //Если существует файл со старым состоянием менеджера, то пытаемся менеджера восстановить и проверить.
         //Иначе генерируем данные и проходим тесты
         if (fileName.exists()) {
             //Проверяем, получилось ли восстановить. Для этого выводим на экран списки и сверяем с файлом
-            manager.loadFromFile(fileName);
             System.out.println("taskCounter = " + manager.getTaskCounter()
                     + " subTaskCounter = " + manager.getSubTaskCounter()
                     + " epicCounter = " + manager.getEpicCounter());
