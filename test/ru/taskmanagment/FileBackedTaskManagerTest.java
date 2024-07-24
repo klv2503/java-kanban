@@ -102,6 +102,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         try {
             anotherManager = manager.loadFromFile(manager.fileName);
         } catch (Exception e) {
+            System.out.println(e.toString());
             try {
                 throw new ManagerSaveException("Произошла ошибка чтения данных. Файл "
                         + anotherManager.fileName.toPath()
