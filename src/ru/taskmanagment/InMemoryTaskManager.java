@@ -1,6 +1,9 @@
 package ru.taskmanagment;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class InMemoryTaskManager implements TaskManager {
 
@@ -15,6 +18,13 @@ public class InMemoryTaskManager implements TaskManager {
     int getTaskCall = 0;
     int getSubTaskCall = 0;
     int getEpicCall = 0;
+    //создаем TreeSet, в котором отсортируем подзадачи
+    static final int standartDuration = 15; //стандартное время выполнения одной подзадачи
+    Set<SubTask> sortedSubTasks = new TreeSet<>(
+            (SubTask d1, SubTask d2) ->
+                    (d1.getStartTime().isBefore(d2.getStartTime())) ? -1 :
+                            (d1.getStartTime().isAfter(d2.getStartTime())) ? 1 : 0
+    );
 
     public static int getTaskCounter() {
         return taskCounter;
@@ -59,17 +69,17 @@ public class InMemoryTaskManager implements TaskManager {
     public void renewTask(Task task) {
         if (tasksList.containsKey(task.code)) {
             tasksList.put(task.code, task);
-            for (int i : subTasksList.keySet()) {
-                if (subTasksList.get(i).code == task.code) {
-                    SubTask subTask = subTasksList.get(i);
-                    subTask.name = task.name;
-                    subTask.description = task.description;
-                    subTasksList.put(i, subTask);
-                }
-            }
-            for (int epicId : epicsList.keySet()) {
-                epicsList.get(epicId).changeStringDataOfSubTask(task);
-            }
+            subTasksList.keySet().stream()
+                    .map(i -> subTasksList.get(i))
+                    .filter(subTask -> subTask.getCode() == task.code)
+                    .forEach(subTask -> {
+                        subTask.setName(task.name);
+                        subTask.setDescription(task.description);
+                        subTasksList.put(subTask.ownCode, subTask);
+                    });
+            epicsList.keySet().stream()
+                    .map(i -> epicsList.get(i))
+                    .forEach(epic -> epic.changeStringDataOfSubTask(task));
         }
     }
 
@@ -78,9 +88,9 @@ public class InMemoryTaskManager implements TaskManager {
         if (tasksList.isEmpty()) {
             System.out.println("The tasklist now is empty");
         } else {
-            for (int i : tasksList.keySet()) {
-                System.out.println(tasksList.get(i));
-            }
+            tasksList.keySet().stream()
+                    .map(i -> tasksList.get(i))
+                    .forEach(System.out::println);
         }
     }
 
@@ -88,9 +98,9 @@ public class InMemoryTaskManager implements TaskManager {
         if (subTasksList.isEmpty()) {
             System.out.println("The SubTaskslist now is empty");
         } else {
-            for (int i : subTasksList.keySet()) {
-                System.out.println(subTasksList.get(i));
-            }
+            subTasksList.keySet().stream()
+                    .map(i -> subTasksList.get(i))
+                    .forEach(System.out::println);
         }
     }
 
@@ -100,20 +110,17 @@ public class InMemoryTaskManager implements TaskManager {
         // сама задача и удаленные подзадачи удаляются также из истории просмотров
         if (tasksList.containsKey(taskId)) {
             String hisCode;
-            for (int epicId : epicsList.keySet()) {
-                ArrayList<Integer> subTaskIndexes = new ArrayList<>();
-                Epic epic = epicsList.get(epicId);
-                subTaskIndexes = epic.seekSubTasksIndexesByTaskId(taskId);
-                if (!subTaskIndexes.isEmpty()) {
-                    for (int i : subTaskIndexes) {
-                        int codeToErase = epic.epicsTasks.get(i).ownCode;
-                        subTasksList.remove(codeToErase);
-                        hisCode = "s" + codeToErase;
-                        inMemoryHistoryManager.remove(hisCode);
-                    }
-                    epic.deleteAllEpicsSubTasksByTaskId(taskId);
-                }
-            }
+            subTasksList = subTasksList.keySet().stream()
+                    .map(i -> subTasksList.get(i))
+                    .peek(subTask -> {
+                        if (subTask.code == taskId)
+                            inMemoryHistoryManager.remove("s" + subTask.ownCode);
+                    })
+                    .filter(subTask -> !(subTask.code == taskId))
+                    .collect(Collectors.toMap(SubTask::getOwnCode, subTask -> subTask));
+            epicsList.keySet().stream()
+                    .map(i -> epicsList.get(i))
+                    .forEach(epic -> epic.deleteAllEpicsSubTasksByTaskId(taskId));
             hisCode = "t" + taskId;
             inMemoryHistoryManager.remove(hisCode);
             tasksList.remove(taskId);
@@ -141,16 +148,39 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public void createEpic(String name, String descript, int subTasksNumber) {
+    public Epic createEpic(String name, String descript, int subTasksNumber) {
         Epic epic = new Epic(++epicCounter, name, descript, Status.NEW);
         epic.setEpicsTasks(createEpicSubTasks(subTasksNumber));
+        epic.setStartTime();
+        epic.setDuration();
+        epic.setEndTime();
         epicsList.put(epic.code, epic);
+        return epic;
     }
 
-    public SubTask makeSubTask(Task task) {
-        SubTask newSub = new SubTask(task, ++subTaskCounter, Status.NEW);
-        subTasksList.put(newSub.ownCode, newSub);
-        return newSub;
+    public boolean isValidSubTask(SubTask testedSubTask) {
+        getPrioritizedTasks();
+        if (sortedSubTasks.isEmpty())
+            return true;
+        else
+            return sortedSubTasks.stream()
+                    .allMatch(subTask -> (testedSubTask.getEndTime().isBefore(subTask.getStartTime()))
+                            || (testedSubTask.getEndTime().equals(subTask.getStartTime()))
+                            || (testedSubTask.getStartTime().isAfter(subTask.getEndTime()))
+                            || (testedSubTask.getStartTime().equals(subTask.getEndTime()))
+                    );
+    }
+
+    public SubTask makeSubTask(Task task, int duration) {
+        long startShift = TimeManager.findStartShift(duration);
+        LocalDateTime locDT = TimeManager.standartStart.plus(Duration.ofMinutes(startShift));
+        SubTask newSub = new SubTask(task, ++subTaskCounter, Status.NEW, duration, locDT);
+        if (isValidSubTask(newSub)) {
+            subTasksList.put(newSub.ownCode, newSub);
+            sortedSubTasks.add(newSub);
+            return newSub;
+        } else
+            return null;
     }
 
     public ArrayList<SubTask> createEpicSubTasks(Integer howTasksInEpic) {
@@ -161,7 +191,9 @@ public class InMemoryTaskManager implements TaskManager {
                 int taskNumber = rnd.nextInt(taskCounter - 1) + 1;
                 if (tasksList.containsKey(taskNumber)) {
                     Task task = tasksList.get(taskNumber);
-                    currentList.add(makeSubTask(task));
+                    SubTask newSub = makeSubTask(task, standartDuration);
+                    if (newSub != null)
+                        currentList.add(newSub);
                 }
             }
         }
@@ -174,9 +206,7 @@ public class InMemoryTaskManager implements TaskManager {
             System.out.println("Список эпиков в данный момент пуст.");
             return;
         }
-        for (Integer code : epicsList.keySet()) {
-            printEpicByCode(code);
-        }
+        epicsList.keySet().forEach(this::printEpicByCode);
     }
 
     @Override
@@ -320,9 +350,11 @@ public class InMemoryTaskManager implements TaskManager {
             System.out.println("Нет задачи с кодом " + taskId);
             return;
         }
-        SubTask subTask = new SubTask(tasksList.get(taskId), ++subTaskCounter, Status.NEW);
-        subTasksList.put(subTask.ownCode, subTask);
-        epicsList.get(epicId).addSubTaskInEpic(subTask, place);
+        SubTask subTask = makeSubTask(tasksList.get(taskId), standartDuration);
+        if (subTask != null)
+            epicsList.get(epicId).addSubTaskInEpic(subTask, place);
+        else
+            System.out.println("Подзадачу создать не удалось из-за конфликта по времени");
     }
 
     @Override
@@ -340,11 +372,7 @@ public class InMemoryTaskManager implements TaskManager {
     @Override
     public void deleteAllSubTasks() {
         //Перед очисткой списка подзадач убираем все подзадачи из всех эпиков
-        if (!epicsList.isEmpty()) {
-            for (int code : epicsList.keySet()) {
-                deleteAllEpicsSubTask(code);
-            }
-        }
+        epicsList.keySet().stream().forEach(i -> deleteAllEpicsSubTask(i));
         subTasksList.clear();
     }
 
@@ -353,12 +381,23 @@ public class InMemoryTaskManager implements TaskManager {
         //Подзадачи без эпиков не имеют смысла, поэтому их тоже удаляем
         if (!epicsList.isEmpty()) {
             deleteAllSubTasks();
-            for (int epicId : epicsList.keySet()) {
-                String hisId = "e" + epicId;
-                inMemoryHistoryManager.remove(hisId);
-            }
+            epicsList.keySet().stream().forEach(i -> inMemoryHistoryManager.remove("e" + i));
             epicsList.clear();
         }
+    }
+
+    public void getPrioritizedTasks() {
+        sortedSubTasks.clear();
+        subTasksList.keySet().stream()
+                .map(i -> subTasksList.get(i))
+                .filter(subTask -> subTask.startTime != null)
+                .forEach(subTask -> sortedSubTasks.add(subTask));
+    }
+
+    public void printPrioritizedTasks() {
+        if (sortedSubTasks.isEmpty())
+            getPrioritizedTasks();
+        sortedSubTasks.stream().forEach(System.out::println);
     }
 
     public void printHistory() {
@@ -373,11 +412,9 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public int getSpecificEpic() { //ищем эпик, у которого больше двух подзадач, берем первый попавшийся
-        for (int epicId : epicsList.keySet()) {
-            if (2 < getHowSubTasks(epicId)) {
-                return epicId;
-            }
-        }
-        return -1;
+        Optional<Integer> result = epicsList.keySet().stream()
+                .filter(epicId -> 2 < getHowSubTasks(epicId))
+                .findFirst();
+        return (result.isEmpty()) ? -1 : result.get();
     }
 }

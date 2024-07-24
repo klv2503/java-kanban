@@ -17,7 +17,7 @@ public interface TaskManager {
 
     //Операции с эпиками
 
-    void createEpic(String name, String description, int subTasksNumber);
+    Epic createEpic(String name, String description, int subTasksNumber);
 
     Epic getEpicByCode(Integer epicId);
 
