@@ -4,7 +4,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -17,13 +16,6 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
     static int numberOfGeneratedTasks = 4;
     static int numberOfGeneratedEpics = 2;
 
-    @AfterAll
-    public static void deleteTmpFile() throws IOException {
-        if (nameOfTestFile.exists()) {
-            Files.delete(nameOfTestFile.toPath());
-        }
-    }
-    
     @Test
     public void testIfFileBackedTaskManagerWritesAndReadEmptyFile() {
         FileBackedTaskManager manager = new FileBackedTaskManager(nameOfTestFile);
