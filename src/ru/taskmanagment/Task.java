@@ -48,4 +48,8 @@ public class Task {
                 ", description='" + description + '\'' +
                 '}';
     }
+
+    public String taskToCSV() {
+        return String.format("%d,TASK,%s, ,%s%n", code, name, description);
+    }
 }

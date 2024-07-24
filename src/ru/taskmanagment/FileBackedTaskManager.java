@@ -11,53 +11,46 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class FileBackedTaskManager extends InMemoryTaskManager {
 
-    static Path fileName;
+    static File fileName;
     final String home = System.getProperty("user.home");
     //Пока список тупо перезаписывается при вызове метода save.
     //Скорее всего, список переделаю в двусвязную мапу по образцу хранения истории.
     static List<String> dataToSave;
 
-    public FileBackedTaskManager(String fileToSave) {
-        fileName = Paths.get(home, fileToSave);
+    public FileBackedTaskManager(File fileToSave) {
+        fileName = fileToSave;
         dataToSave = new ArrayList<>();
     }
 
-    public String convertDataToString(Task task) {
-        //Метод не знает, к какому эпику относится подзадача, его номер к строке подзадачи добавляется
-        //в prepareDataToSave(). Из-за этого добавление "\n" (для всех - из соображений общности)
-        //тоже оставлено в prepareDataToSave()
-        if (task instanceof Epic) {
-            Epic epic = (Epic) task;
-            return String.format("%d,EPIC,%s,%s,%s", epic.code, epic.name, epic.epicStatus, epic.description);
-        } else if (task instanceof SubTask) {
-            SubTask subTask = (SubTask) task;
-            return String.format("%d,SUBTASK,%s,%s,%s,%d", subTask.ownCode, subTask.name,
-                    subTask.status, subTask.description, subTask.code);
-        } else {
-            return String.format("%d,TASK,%s, ,%s", task.code, task.name, task.description);
-        }
-    }
-
     public void prepareDataToSave() {
-        //В состоянии менеджера первая строка запоминает значения счетчиков. Они требуются для запуска менеджера
-        //с сохраненной точки и удобнее их записать в файл, чем при чтении файла высчитывать.
-        //Далее строки идут в формате id,type,name,status,description,parentTask,epic.
-        //Сам формат в файл не пишется. Поскольку в принятой схеме связь SubTask и Task идет через поле SubTask.code,
-        //в формат добавлено поле parentTask для восстановления этой связи при загрузке из файла
+        //Прочитал про стандарт формата CSV, решил сделать файл согласно стандарту.
+        //Поэтому заголовки пишутся в файл, а значения счетчиков высчитываются при загрузке.
+        //Добавил новые поля согласно ТЗ к Спринту8.
+        //Класс CSVFormatter сплагиатил у наставника. Заодно нашлось более симпатичное (как мне кажется)
+        //решение с преобразованием задач в строки.
         dataToSave.clear();
-        dataToSave.add(String.format("%d,%d,%d%n", taskCounter, subTaskCounter, epicCounter));
-        for (int i : tasksList.keySet())
-            dataToSave.add(convertDataToString(tasksList.get(i)) + "\n");
+        dataToSave.add("id,type,name,status,description,startTime,duration,endTime,parentTask,epic\n");
+        dataToSave.addAll(
+                tasksList.keySet().stream()
+                        .map(i -> tasksList.get(i))
+                        .map(task -> CSVFormatter.convertDataToCSVString(task))
+                        .toList()
+        );
+        epicsList.keySet().stream()
+                .map(i -> epicsList.get(i))
+                .peek(epic -> dataToSave.add(CSVFormatter.convertDataToCSVString(epic)))
+                .forEach(epic -> epic.getEpicsTasks().stream()
+                        .forEach(subTask -> dataToSave.add(CSVFormatter.convertDataToCSVString(subTask, epic.code))));
+/*
         for (int i : epicsList.keySet()) {
-            dataToSave.add(convertDataToString(epicsList.get(i)) + "\n");
+            dataToSave.add(CSVFormatter.convertDataToCSVString(epicsList.get(i)));
             for (int j = 0; j < epicsList.get(i).epicsTasks.size(); j++) {
-                dataToSave.add(convertDataToString(epicsList.get(i).epicsTasks.get(j)) + "," + i + "\n");
+                dataToSave.add(CSVFormatter.convertDataToCSVString(epicsList.get(i).epicsTasks.get(j), i));
             }
-        }
+        } */
     }
 
     public void save() {
-        //Методу возвращено название save, теперь он снова пишет файл при каждом изменении в списках объектов
         prepareDataToSave();
         String tmpName;
         Path pathToTmp = null;
@@ -76,7 +69,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
         try {
             if (pathToTmp.toFile().exists()) {
-                Files.copy(pathToTmp, fileName, REPLACE_EXISTING);
+                Files.copy(pathToTmp, fileName.toPath(), REPLACE_EXISTING);
                 Files.delete(pathToTmp);
             }
         } catch (Exception e) {
@@ -88,28 +81,12 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
     }
 
-    public static Task fromString(String value) {
-        String[] toTask = value.split(",");
-        switch (toTask[1]) {
-            case "TASK":
-                return new Task(Integer.parseInt(toTask[0]), toTask[2], toTask[4]);
-            case "EPIC":
-                return new Epic(Integer.parseInt(toTask[0]), toTask[2], toTask[4], Status.valueOf(toTask[3]));
-            case "SUBTASK":
-                return new SubTask(Integer.parseInt(toTask[5]), toTask[2], toTask[4],
-                        Integer.parseInt(toTask[0]), Status.valueOf(toTask[3]));
-            default:
-                return null;
-        }
-    }
-
     public static void restoreTasks() {
         if (dataToSave.isEmpty())
             return;
-        String[] workStr = dataToSave.get(0).split(",");
-        taskCounter = Integer.parseInt(workStr[0]);
-        subTaskCounter = Integer.parseInt(workStr[1]);
-        epicCounter = Integer.parseInt(workStr[2]);
+        taskCounter = 0;
+        subTaskCounter = 0;
+        epicCounter = 0;
         for (int i = 1; i < dataToSave.size(); i++) {
             String str = dataToSave.get(i);
             int beginInd = str.indexOf(",") + 1;
@@ -117,41 +94,49 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
             TaskTypes type = TaskTypes.valueOf(str.substring(beginInd, endInd));
             switch (type) {
                 case TASK: {
-                    Task task = fromString(str);
+                    Task task = CSVFormatter.fromCSV2Task(str);
                     tasksList.put(task.code, task);
+                    if (task.code > taskCounter)
+                        taskCounter = task.code;
                     break;
                 }
                 case SUBTASK: {
                     int key = Integer.parseInt(str.substring(str.lastIndexOf(",") + 1));
                     if (epicsList.containsKey(key)) {
-                        SubTask subTask = (SubTask) fromString(str);
+                        SubTask subTask = (SubTask) CSVFormatter.fromCSV2Task(str);
                         subTasksList.put(subTask.ownCode, subTask);
                         epicsList.get(key).epicsTasks.add(subTask);
+                        if (subTask.ownCode > subTaskCounter)
+                            subTaskCounter = subTask.ownCode;
                     } else
                         System.out.println("При чтении файла обнаружена ошибка сохранения эпиков и подзадач.");
                     break;
                 }
                 case EPIC: {
-                    Epic epic = (Epic) fromString(str);
+                    Epic epic = (Epic) CSVFormatter.fromCSV2Task(str);
                     epicsList.put(epic.code, epic);
+                    if (epic.code > epicCounter)
+                        epicCounter = epic.code;
                 }
             }
         }
     }
 
-    public static void loadFromFile(File file) {
-        if (!file.exists())
-            return;
-        try {
-            dataToSave = Files.readAllLines(file.toPath());
-            restoreTasks();
-        } catch (Exception e) {
+    public static FileBackedTaskManager loadFromFile(File file) {
+        //Выяснилось, что я прозевал сигнатуру метода. Переделал под требования ТЗ к спринту7
+        FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(file);
+        if (file.exists())
             try {
-                throw new ManagerSaveException("Произошла ошибка чтения данных");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
+                dataToSave = Files.readAllLines(file.toPath());
+                restoreTasks();
+            } catch (Exception e) {
+                try {
+                    throw new ManagerSaveException("Произошла ошибка чтения данных");
+                } catch (ManagerSaveException ex) {
+                    throw new RuntimeException(ex);
+                }
             }
-        }
+        return fileBackedTaskManager;
     }
 
     @Override
@@ -161,9 +146,10 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public void createEpic(String name, String descript, int subTasksNumber) {
-        super.createEpic(name, descript, subTasksNumber);
+    public Epic createEpic(String name, String descript, int subTasksNumber) {
+        Epic epic = super.createEpic(name, descript, subTasksNumber);
         save();
+        return epic;
     }
 
     @Override

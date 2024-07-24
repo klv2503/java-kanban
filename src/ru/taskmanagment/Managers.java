@@ -1,5 +1,7 @@
 package ru.taskmanagment;
 
+import java.io.File;
+
 public class Managers {
 
     private Managers() {
@@ -10,8 +12,8 @@ public class Managers {
         return new InMemoryTaskManager();
     }
 
-    public static TaskManager getFileBack(String str) {
-        return new FileBackedTaskManager(str);
+    public static TaskManager FileBackedTaskManager(File file) {
+        return new FileBackedTaskManager(file);
     }
 
     static InMemoryHistoryManager getDefaultHistory() {
