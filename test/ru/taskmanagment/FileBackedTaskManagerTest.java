@@ -83,6 +83,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
                 + manager.subTaskCounter + 1;
         int realSize = manager.dataToSave.size();
         assertEquals(expectedSize, realSize, errorMessage);
+        String oldFileName = manager.fileName.toString();
         try {
             manager.save();
         } catch (Exception e) {
@@ -103,7 +104,9 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
             manager.loadFromFile(nameOfTestFile);
         } catch (Exception e) {
             try {
-                throw new ManagerSaveException("Произошла ошибка чтения данных");
+                throw new ManagerSaveException("Произошла ошибка чтения данных. Файл "
+                        + manager.fileName.toPath()
+                        + " Старое имя " + oldFileName);
             } catch (ManagerSaveException ex) {
                 throw new RuntimeException(ex);
             }
