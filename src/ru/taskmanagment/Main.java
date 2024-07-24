@@ -1,18 +1,18 @@
 package ru.taskmanagment;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
 
     public static void main(String[] args) {
-        String fileName = "managesaver.txt";
-        FileBackedTaskManager manager =
-                (FileBackedTaskManager) Managers.getFileBack(fileName);
+        File fileName = Paths.get(System.getProperty("user.home"), "managesaver.txt").toFile();
+        FileBackedTaskManager manager = FileBackedTaskManager.loadFromFile(fileName);
         //Если существует файл со старым состоянием менеджера, то пытаемся менеджера восстановить и проверить.
         //Иначе генерируем данные и проходим тесты
-        if (manager.fileName.toFile().exists()) {
-            manager.loadFromFile(manager.fileName.toFile());
+        if (fileName.exists()) {
             //Проверяем, получилось ли восстановить. Для этого выводим на экран списки и сверяем с файлом
             System.out.println("taskCounter = " + manager.getTaskCounter()
                     + " subTaskCounter = " + manager.getSubTaskCounter()
@@ -20,6 +20,11 @@ public class Main {
             manager.printTaskList();
             manager.printEpicList();
             manager.printHistory();
+            waitEnter();
+            //добавлена проверка методов с TreeSet
+            manager.getPrioritizedTasks();
+            manager.printPrioritizedTasks();
+            waitEnter();
             return;
         }
         // Test0
@@ -36,6 +41,7 @@ public class Main {
         // Test1.1
         System.out.println("Задачи Тест 1: Распечатать список задач:");
         manager.printTaskList();
+        manager.printEpicList();
         waitEnter();
         // Test1.2
         System.out.println("Задачи Тест 2: создать задачу:");
@@ -190,16 +196,16 @@ public class Main {
         waitEnter();
     }
 
-    public static void generateTestData(InMemoryTaskManager inMemoryTaskManager, int taskNum, int epicNum) {
+    public static void generateTestData(InMemoryTaskManager manager, int taskNum, int epicNum) {
         for (int i = 0; i < taskNum; i++) {
-            inMemoryTaskManager.makeTask("Shortly", "Long description");
+            manager.makeTask("Shortly", "Long description");
         }
         Random rnd = new Random();
         for (int i = 0; i < epicNum; i++) {
             String name = "Epic #";
             String description = "Description of Epic #";
             int taskNumber = rnd.nextInt(taskNum - 1) + 1;
-            inMemoryTaskManager.makeTestEpic(name, description, taskNumber);
+            manager.makeTestEpic(name, description, taskNumber);
         }
     }
 
