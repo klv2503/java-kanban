@@ -1,5 +1,6 @@
 package ru.taskmanagment;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -15,6 +16,11 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
     static int numberOfGeneratedTasks = 4;
     static int numberOfGeneratedEpics = 2;
 
+    @AfterAll
+    public static void deleteTmpFile() throws IOException {
+        if (nameOfTestFile.exists()) Files.delete(nameOfTestFile.toPath());
+    }
+    
     @Test
     public void testIfFileBackedTaskManagerWritesAndReadEmptyFile() {
         FileBackedTaskManager manager = new FileBackedTaskManager(nameOfTestFile);
@@ -77,7 +83,6 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         int realSize = manager.dataToSave.size();
         assertEquals(expectedSize, realSize, errorMessage);
         try {
-            manager.fileName = Files.createTempFile("TestTmp4Manager", ".txt").toFile();
             manager.save();
         } catch (Exception e) {
             try {
