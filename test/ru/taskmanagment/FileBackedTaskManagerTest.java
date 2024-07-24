@@ -102,7 +102,6 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         manager.epicsList.clear();
         try {
             manager.loadFromFile(manager.fileName);
-            Files.delete(manager.fileName.toPath());
         } catch (Exception e) {
             try {
                 throw new ManagerSaveException("Произошла ошибка чтения данных");
