@@ -17,6 +17,9 @@ abstract class TaskManagerTest<T extends TaskManager> {
             String description = "Description of Epic #";
             int taskNumber = rnd.nextInt(numberOfGeneratedTasks - 1) + 1;
             manager.makeTestEpic(name, description, taskNumber);
+            //В целях тестирования PrioritizedTasks три task (№1, №3, №5) делаем выполняемыми
+            if (i % 2 == 0)
+                manager.makeTaskExecutable(manager.tasksList.get(i + 1), 15);
         }
     }
 

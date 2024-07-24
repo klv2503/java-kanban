@@ -18,10 +18,11 @@ public class InMemoryTaskManager implements TaskManager {
     int getTaskCall = 0;
     int getSubTaskCall = 0;
     int getEpicCall = 0;
+    //стандартное время выполнения одной подзадачи
+    static final int standartDuration = 15;
     //создаем TreeSet, в котором отсортируем подзадачи
-    static final int standartDuration = 15; //стандартное время выполнения одной подзадачи
-    Set<SubTask> sortedSubTasks = new TreeSet<>(
-            (SubTask d1, SubTask d2) ->
+    Set<Task> sortedTasks = new TreeSet<>(
+            (Task d1, Task d2) ->
                     (d1.getStartTime().isBefore(d2.getStartTime())) ? -1 :
                             (d1.getStartTime().isAfter(d2.getStartTime())) ? 1 : 0
     );
@@ -113,8 +114,10 @@ public class InMemoryTaskManager implements TaskManager {
             subTasksList = subTasksList.keySet().stream()
                     .map(i -> subTasksList.get(i))
                     .peek(subTask -> {
-                        if (subTask.code == taskId)
+                        if (subTask.code == taskId) {
                             inMemoryHistoryManager.remove("s" + subTask.ownCode);
+                            sortedTasks.remove(subTask);
+                        }
                     })
                     .filter(subTask -> !(subTask.code == taskId))
                     .collect(Collectors.toMap(SubTask::getOwnCode, subTask -> subTask));
@@ -123,7 +126,45 @@ public class InMemoryTaskManager implements TaskManager {
                     .forEach(epic -> epic.deleteAllEpicsSubTasksByTaskId(taskId));
             hisCode = "t" + taskId;
             inMemoryHistoryManager.remove(hisCode);
+            if (tasksList.get(taskId).getStartTime() != null)
+                sortedTasks.remove(tasksList.get(taskId));
             tasksList.remove(taskId);
+        }
+    }
+
+    public boolean isTasksNotCrossByTime(Task task1, Task task2) {
+        //Метод возвращает true, если tasks не накладываются во времени.
+        //Если задачи совпадают, это не считается наложением во времени
+        return task1.equals(task2)
+                || task1.getEndTime().isBefore(task2.getStartTime())
+                || task1.getEndTime().equals(task2.getStartTime())
+                || task1.getStartTime().isAfter(task2.getEndTime())
+                || task1.getStartTime().equals(task2.getEndTime());
+    }
+
+    public boolean isValidTime(LocalDateTime startTime, Duration duration) {
+        getPrioritizedTasks();
+        if (sortedTasks.isEmpty())
+            return true;
+        else {
+            return sortedTasks.stream()
+                    .allMatch(subTask -> (startTime.plus(duration).isBefore(subTask.getStartTime()))
+                            || (startTime.plus(duration).equals(subTask.getStartTime()))
+                            || (startTime.isAfter(subTask.getEndTime()))
+                            || (startTime.equals(subTask.getEndTime()))
+                    );
+        }
+    }
+
+    public void makeTaskExecutable(Task task, int duration) {
+        //Поскольку Task не обязана иметь собственные startTime и duration (т.е. не выполняться вне эпиков)
+        //метод устанавливает startTime и duration для Task, которая как бы эпик из одной задачи
+        long startShift = TimeManager.findStartShift(duration);
+        LocalDateTime locDT = TimeManager.standartStart.plus(Duration.ofMinutes(startShift));
+        if (isValidTime(locDT, Duration.ofMinutes(duration))) {
+            task.setStartTime(locDT);
+            task.setDuration(Duration.ofMinutes(duration));
+            sortedTasks.add(task);
         }
     }
 
@@ -136,6 +177,7 @@ public class InMemoryTaskManager implements TaskManager {
         epicsList.clear();
         epicCounter = 0;
         inMemoryHistoryManager.removeAllHistory();
+        sortedTasks.clear();
     }
 
 // Конец группы методов работы с задачами
@@ -158,26 +200,13 @@ public class InMemoryTaskManager implements TaskManager {
         return epic;
     }
 
-    public boolean isValidSubTask(SubTask testedSubTask) {
-        getPrioritizedTasks();
-        if (sortedSubTasks.isEmpty())
-            return true;
-        else
-            return sortedSubTasks.stream()
-                    .allMatch(subTask -> (testedSubTask.getEndTime().isBefore(subTask.getStartTime()))
-                            || (testedSubTask.getEndTime().equals(subTask.getStartTime()))
-                            || (testedSubTask.getStartTime().isAfter(subTask.getEndTime()))
-                            || (testedSubTask.getStartTime().equals(subTask.getEndTime()))
-                    );
-    }
-
     public SubTask makeSubTask(Task task, int duration) {
         long startShift = TimeManager.findStartShift(duration);
         LocalDateTime locDT = TimeManager.standartStart.plus(Duration.ofMinutes(startShift));
-        SubTask newSub = new SubTask(task, ++subTaskCounter, Status.NEW, duration, locDT);
-        if (isValidSubTask(newSub)) {
+        if (isValidTime(locDT, Duration.ofMinutes(duration))) {
+            SubTask newSub = new SubTask(task, ++subTaskCounter, Status.NEW, duration, locDT);
             subTasksList.put(newSub.ownCode, newSub);
-            sortedSubTasks.add(newSub);
+            sortedTasks.add(newSub);
             return newSub;
         } else
             return null;
@@ -317,6 +346,7 @@ public class InMemoryTaskManager implements TaskManager {
             for (int i = 0; i < currentArray.size(); i++) {
                 String hisCode = "s" + currentArray.get(i).ownCode;
                 inMemoryHistoryManager.remove(hisCode);
+                sortedTasks.remove(currentArray.get(i));
                 subTasksList.remove(currentArray.get(i).ownCode);
             }
             epicsList.get(epicId).clearEpicsSubTasks();
@@ -387,17 +417,21 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public void getPrioritizedTasks() {
-        sortedSubTasks.clear();
+        sortedTasks.clear();
+        tasksList.keySet().stream()
+                .map(i -> tasksList.get(i))
+                .filter(task -> task.startTime != null)
+                .forEach(task -> sortedTasks.add(task));
         subTasksList.keySet().stream()
                 .map(i -> subTasksList.get(i))
                 .filter(subTask -> subTask.startTime != null)
-                .forEach(subTask -> sortedSubTasks.add(subTask));
+                .forEach(subTask -> sortedTasks.add(subTask));
     }
 
     public void printPrioritizedTasks() {
-        if (sortedSubTasks.isEmpty())
+        if (sortedTasks.isEmpty())
             getPrioritizedTasks();
-        sortedSubTasks.stream().forEach(System.out::println);
+        sortedTasks.stream().forEach(System.out::println);
     }
 
     public void printHistory() {

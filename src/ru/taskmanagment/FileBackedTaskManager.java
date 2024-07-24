@@ -32,7 +32,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         dataToSave.addAll(
                 tasksList.keySet().stream()
                         .map(i -> tasksList.get(i))
-                        .map(task -> CSVFormatter.convertDataToCSVString(task))
+                        .map(CSVFormatter::convertDataToCSVString)
                         .toList()
         );
         epicsList.keySet().stream()
@@ -52,24 +52,16 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
             for (int i = 0; i < dataToSave.size(); i++) {
                 bufferedWriter.write(dataToSave.get(i));
             }
-        } catch (Exception e) {
-            try {
-                throw new ManagerSaveException("Произошла ошибка сохранения данных в tmp-файл");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
+        } catch (IOException e) {
+            throw new ManagerSaveException("Произошла ошибка сохранения данных в tmp-файл");
         }
         try {
             if (pathToTmp.toFile().exists()) {
                 Files.copy(pathToTmp, fileName.toPath(), REPLACE_EXISTING);
                 Files.delete(pathToTmp);
             }
-        } catch (Exception e) {
-            try {
-                throw new ManagerSaveException("Произошла ошибка записи данных в постоянный файл");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
+        } catch (IOException e) {
+            throw new ManagerSaveException("Произошла ошибка записи данных в постоянный файл");
         }
     }
 
@@ -114,19 +106,18 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
     }
 
-    public static void loadFromFile(File file) {
+    public static FileBackedTaskManager loadFromFile(File file) {
         //Выяснилось, что я прозевал сигнатуру метода. Переделал под требования ТЗ к спринту7
-        if (file.exists())
+        FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(file);
+        if (file.exists()) {
             try {
-                dataToSave = Files.readAllLines(file.toPath());
-                restoreTasks();
-            } catch (Exception e) {
-                try {
-                    throw new ManagerSaveException("Произошла ошибка чтения данных");
-                } catch (ManagerSaveException ex) {
-                    throw new RuntimeException(ex);
-                }
+                fileBackedTaskManager.dataToSave = Files.readAllLines(file.toPath());
+            } catch (IOException e) {
+                throw new ManagerSaveException("Произошла ошибка чтения данных");
             }
+        }
+        fileBackedTaskManager.restoreTasks();
+        return fileBackedTaskManager;
     }
 
     @Override
@@ -145,6 +136,12 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     @Override
     public void renewTask(Task task) {
         super.renewTask(task);
+        save();
+    }
+
+    @Override
+    public void makeTaskExecutable(Task task, int duration) {
+        super.makeTaskExecutable(task, duration);
         save();
     }
 

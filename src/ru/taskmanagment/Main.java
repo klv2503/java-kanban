@@ -9,12 +9,11 @@ public class Main {
 
     public static void main(String[] args) {
         File fileName = Paths.get(System.getProperty("user.home"), "managesaver.txt").toFile();
-        FileBackedTaskManager manager = new FileBackedTaskManager(fileName);
+        FileBackedTaskManager manager = FileBackedTaskManager.loadFromFile(fileName);
         //Если существует файл со старым состоянием менеджера, то пытаемся менеджера восстановить и проверить.
         //Иначе генерируем данные и проходим тесты
         if (fileName.exists()) {
             //Проверяем, получилось ли восстановить. Для этого выводим на экран списки и сверяем с файлом
-            manager.loadFromFile(fileName);
             System.out.println("taskCounter = " + manager.getTaskCounter()
                     + " subTaskCounter = " + manager.getSubTaskCounter()
                     + " epicCounter = " + manager.getEpicCounter());
@@ -44,6 +43,8 @@ public class Main {
         System.out.println("Задачи Тест 1: Распечатать список задач:");
         manager.printTaskList();
         manager.printEpicList();
+        waitEnter();
+        manager.printPrioritizedTasks();
         waitEnter();
         // Test1.2
         System.out.println("Задачи Тест 2: создать задачу:");
@@ -208,6 +209,10 @@ public class Main {
             String description = "Description of Epic #";
             int taskNumber = rnd.nextInt(taskNum - 1) + 1;
             manager.makeTestEpic(name, description, taskNumber);
+            //Для проверки после нескольких эпиков назначаем старт у нескольких task
+            if (i % 2 == 0) {
+                manager.makeTaskExecutable(manager.tasksList.get(i + 1), manager.standartDuration);
+            }
         }
     }
 

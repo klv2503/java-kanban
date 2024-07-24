@@ -8,22 +8,20 @@ import java.util.Optional;
 
 
 public class Epic extends Task {
-    Status epicStatus;
-    LocalDateTime startTime;
+    Status status;
     LocalDateTime endTime;
-    Duration duration;
     ArrayList<SubTask> epicsTasks;
 
-    public Epic(int code, String name, String description, Status epicStatus) {
+    public Epic(int code, String name, String description, Status status) {
         super(code, name, description);
-        this.epicStatus = epicStatus;
+        this.status = status;
         epicsTasks = new ArrayList<>();
     }
 
-    public Epic(int code, String name, String description, Status epicStatus,
+    public Epic(int code, String name, Status status, String description,
                 String stTime, String strDuration, String eTime) {
         super(code, name, description);
-        this.epicStatus = epicStatus;
+        this.status = status;
         epicsTasks = new ArrayList<>();
         this.startTime = (stTime.isEmpty()) ? null : LocalDateTime.parse(stTime, TimeManager.dateTimeFormatter);
         this.endTime = (eTime.equals(" ")) ? null : LocalDateTime.parse(eTime, TimeManager.dateTimeFormatter);
@@ -31,8 +29,8 @@ public class Epic extends Task {
         this.duration = Duration.ofMinutes(localTime.getHour() * 60 + localTime.getMinute());
     }
 
-    public void setEpicStatus(Status epicStatus) {
-        this.epicStatus = epicStatus;
+    public void setstatus(Status status) {
+        this.status = status;
     }
 
     public int getEpicCode() {
@@ -43,28 +41,12 @@ public class Epic extends Task {
         this.code = code;
     }
 
-    public Status getEpicStatus() {
-        return epicStatus;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public ArrayList<SubTask> getEpicsTasks() {
         return epicsTasks;
     }
 
     public void setEpicsTasks(ArrayList<SubTask> epicsTasks) {
         this.epicsTasks = epicsTasks;
-    }
-
-    public LocalDateTime getStartTime() {
-        return startTime;
     }
 
     public void setStartTime() {
@@ -80,16 +62,9 @@ public class Epic extends Task {
 
     public void setEndTime() {
         Optional<LocalDateTime> optTime = epicsTasks.stream()
-                .map(s -> s.getEndTime())
+                .map(SubTask::getEndTime)
                 .max((LocalDateTime t1, LocalDateTime t2) -> (t1.isBefore(t2)) ? -1 : 1);
-        if (optTime.isPresent())
-            this.endTime = optTime.get();
-        else
-            this.endTime = null;
-    }
-
-    public Duration getDuration() {
-        return duration;
+        this.endTime = optTime.orElse(null);
     }
 
     public void setDuration() {
@@ -113,7 +88,7 @@ public class Epic extends Task {
                 "epicCode= " + code
                 + ", epicName= '" + name + '\''
                 + ", epicDescription= '" + description + '\''
-                + ", epicStatus= " + epicStatus
+                + ", status= " + status
                 + str
                 + " } ";
     }
@@ -122,7 +97,7 @@ public class Epic extends Task {
         String str = ((startTime == null) ? "," : startTime.format(TimeManager.dateTimeFormatter) + ",")
                 + ((duration == null) ? "," : TimeManager.duration2String(duration) + ",")
                 + ((endTime == null) ? " " : endTime.format(TimeManager.dateTimeFormatter));
-        return String.format("%d,EPIC,%s,%s,%s,%s%n", code, name, epicStatus, description, str);
+        return String.format("%d,EPIC,%s,%s,%s,%s", code, name, status, description, str);
     }
 
     public void addSubTaskInEndOfList(SubTask subTask) {
@@ -174,7 +149,7 @@ public class Epic extends Task {
 
     public void clearEpicsSubTasks() {
         epicsTasks = new ArrayList<>();
-        epicStatus = Status.NEW;
+        status = Status.NEW;
         setStartTime();
         setEndTime();
         setDuration();
@@ -244,7 +219,7 @@ public class Epic extends Task {
         if (epicsTasks.isEmpty()) {
             return Status.NEW;
         }
-        setEpicStatus(Status.IN_PROGRESS);
+        setStatus(Status.IN_PROGRESS);
         int countNew = 0;
         int countInProgress = 0;
         int countDone = 0;
@@ -256,10 +231,10 @@ public class Epic extends Task {
             }
         }
         if (countNew == epicsTasks.size())
-            setEpicStatus(Status.NEW);
+            setStatus(Status.NEW);
         if (countDone == epicsTasks.size())
-            setEpicStatus(Status.DONE);
-        return getEpicStatus();
+            setStatus(Status.DONE);
+        return getStatus();
     }
 
 }

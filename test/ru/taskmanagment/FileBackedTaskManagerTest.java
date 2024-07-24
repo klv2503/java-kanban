@@ -13,14 +13,17 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FileBackedTaskManagerTest extends TaskManagerTest {
     //Тестируем только работу с файлами
     static File nameOfTestFile = Paths.get(System.getProperty("user.home"), "file4Test.txt").toFile();
-    static FileBackedTaskManager manager = new FileBackedTaskManager(nameOfTestFile);
     static int numberOfGeneratedTasks = 4;
     static int numberOfGeneratedEpics = 2;
 
     @AfterAll
-    public static void deleteTmpFile() throws IOException {
-        if (nameOfTestFile.exists())
-            Files.delete(nameOfTestFile.toPath());
+    public static void deleteTmpFile() {
+        try {
+            if (nameOfTestFile.exists())
+                Files.delete(nameOfTestFile.toPath());
+        } catch (IOException ignored) {
+            throw new ManagerSaveException("Error file deleting");
+        }
     }
 
     @Test
@@ -38,22 +41,13 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         manager.epicsList.clear();
         try {
             manager.save();
-        } catch (Exception e) {
-            try {
+        } catch (RuntimeException e) {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
         }
         try {
             manager.loadFromFile(manager.fileName);
-            Files.delete(manager.fileName.toPath());
-        } catch (Exception e) {
-            try {
+        } catch (RuntimeException e) {
                 throw new ManagerSaveException("Произошла ошибка чтения данных");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
         }
         //Поскольку первой записью пишется строка заголовков,
         //при пустых списках объектов в файле должна быть ровно одна запись, а именно перечень полей для CSV
@@ -68,7 +62,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
 
     @Test
     public void createSomeTaskAndEpicAndWriteIntoFileAndReadFile() {
-        manager.deleteAllTasks();
+        FileBackedTaskManager manager = new FileBackedTaskManager(nameOfTestFile);
         for (int i = 0; i < numberOfGeneratedTasks; i++) {
             manager.makeTask("Shortly", "Long description");
         }
@@ -83,15 +77,10 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
                 + manager.subTaskCounter + 1;
         int realSize = manager.dataToSave.size();
         assertEquals(expectedSize, realSize, errorMessage);
-        String oldFileName = manager.fileName.toString();
         try {
             manager.save();
-        } catch (Exception e) {
-            try {
+        } catch (RuntimeException e) {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
         }
         //После записи удаляем всё так, чтобы не было перезаписи в файл и обнуляем счетчики
         manager.taskCounter = 0;
@@ -100,32 +89,29 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         manager.tasksList.clear();
         manager.subTasksList.clear();
         manager.epicsList.clear();
+        FileBackedTaskManager anotherManager = null;
         try {
-            manager.loadFromFile(nameOfTestFile);
-        } catch (Exception e) {
-            try {
+            anotherManager = manager.loadFromFile(manager.fileName);
+        } catch (RuntimeException e) {
                 throw new ManagerSaveException("Произошла ошибка чтения данных. Файл "
-                        + manager.fileName.toPath()
-                        + " Старое имя " + oldFileName);
-            } catch (ManagerSaveException ex) {
-                throw new RuntimeException(ex);
-            }
+                        + anotherManager.fileName.toPath()
+                        + " Старое имя " + manager.fileName.toPath());
         }
         //После чтения и восстановления проверяем счетчики
         errorMessage = "Значение счетчика задач не совпадает с ожидаемым";
-        assertEquals(4, manager.taskCounter, errorMessage);
+        assertEquals(4, anotherManager.taskCounter, errorMessage);
         errorMessage = "Значение счетчика подзадач не совпадает с ожидаемым";
-        assertEquals(5, manager.subTaskCounter, errorMessage);
+        assertEquals(5, anotherManager.subTaskCounter, errorMessage);
         errorMessage = "Значение счетчика эпиков не совпадает с ожидаемым";
-        assertEquals(2, manager.epicCounter, errorMessage);
+        assertEquals(2, anotherManager.epicCounter, errorMessage);
         // считаем и сверяем количество экземпляров объектов
-        int taskNum = manager.tasksList.size();
+        int taskNum = anotherManager.tasksList.size();
         errorMessage = "Количество задач не совпадает с ожидаемым";
         assertEquals(4, taskNum, errorMessage);
-        int epicNum = manager.epicsList.size();
+        int epicNum = anotherManager.epicsList.size();
         errorMessage = "Количество эпиков не совпадает с ожидаемым";
         assertEquals(2, epicNum, errorMessage);
-        int subTaskNum = manager.subTasksList.size();
+        int subTaskNum = anotherManager.subTasksList.size();
         errorMessage = "Количество подзадач не совпадает с ожидаемым";
         assertEquals(5, subTaskNum, errorMessage);
         clearData(manager);
