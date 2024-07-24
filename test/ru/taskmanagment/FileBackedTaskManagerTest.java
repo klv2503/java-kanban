@@ -77,6 +77,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
             int taskNumber = i + 2;
             manager.makeTestEpic(name, description, taskNumber);
         }
+        manager.printEpicList();
         String errorMessage = "Список с состоянием содержит неверное количество строк";
         int expectedSize = manager.taskCounter + manager.epicCounter
                 + manager.subTaskCounter + 1;
