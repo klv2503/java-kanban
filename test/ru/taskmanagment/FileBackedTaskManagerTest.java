@@ -39,6 +39,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         try {
             manager.save();
         } catch (Exception e) {
+            e.printStackTrace();
             try {
                 throw new ManagerSaveException("Произошла ошибка сохранения данных");
             } catch (ManagerSaveException ex) {
@@ -48,6 +49,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest {
         try {
             manager.loadFromFile(manager.fileName);
         } catch (Exception e) {
+            e.printStackTrace();
             try {
                 throw new ManagerSaveException("Произошла ошибка чтения данных");
             } catch (ManagerSaveException ex) {
