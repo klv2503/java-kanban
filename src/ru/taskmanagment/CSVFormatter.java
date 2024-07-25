@@ -12,7 +12,7 @@ public class CSVFormatter {
 
     public static String convertDataToCSVString(Task task, int epicId) {
         String str = task.taskToCSV();
-        str = str + "," + epicId + "\n");
+        str = str + "," + epicId + "\n";
         return str;
     }
 
