@@ -64,6 +64,7 @@ public class Task {
         else
             return startTime.plus(duration);
     }
+    
     public int getCode() {
         return code;
     }
