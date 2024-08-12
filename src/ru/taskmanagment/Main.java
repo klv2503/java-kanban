@@ -23,9 +23,10 @@ public class Main {
             manager.printHistory();
             waitEnter();
             //добавлена проверка методов с TreeSet
-            manager.getPrioritizedTasks();
-            manager.printPrioritizedTasks();
+            manager.createSortedTasks();
+            manager.getPrioritizedTasks().forEach(System.out::println);
             waitEnter();
+            System.out.println(manager.epicsList.get(1).getClass());
             return;
         }
         // Test0
@@ -44,7 +45,7 @@ public class Main {
         manager.printTaskList();
         manager.printEpicList();
         waitEnter();
-        manager.printPrioritizedTasks();
+        manager.getPrioritizedTasks().forEach(System.out::println);
         waitEnter();
         // Test1.2
         System.out.println("Задачи Тест 2: создать задачу:");
@@ -153,15 +154,15 @@ public class Main {
         waitEnter();
         // Тест 2.4.5
         System.out.println("Эпики Тест 4.5: Добавляем задачи в очищенный эпик:");
-        manager.addNewSubToEpic(id, 2, 0);
-        manager.addNewSubToEpic(id, 5, 1);
+        manager.addNewSubToEpic(id, manager.makeSubTask(manager.tasksList.get(2), 15));
+        manager.addNewSubToEpic(id, manager.makeSubTask(manager.tasksList.get(5), 15));
         manager.printEpicByCode(id);
         waitEnter();
         // Тест 2.4.6
         System.out.println("Эпики Тест 4.6: А теперь добавляем задачу в середину списка подзадач:");
         System.out.println("Исходный эпик:");
         manager.printEpicByCode(id);
-        manager.addNewSubToEpic(id, 8, 1);
+        manager.addNewSubToEpic(id, manager.makeSubTask(manager.tasksList.get(8), 15));
         System.out.println("Тот же эпик после вставки:");
         manager.printEpicByCode(id);
         waitEnter();
@@ -209,10 +210,6 @@ public class Main {
             String description = "Description of Epic #";
             int taskNumber = rnd.nextInt(taskNum - 1) + 1;
             manager.makeTestEpic(name, description, taskNumber);
-            //Для проверки после нескольких эпиков назначаем старт у нескольких task
-            if (i % 2 == 0) {
-                manager.makeTaskExecutable(manager.tasksList.get(i + 1), manager.standartDuration);
-            }
         }
     }
 

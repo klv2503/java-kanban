@@ -30,7 +30,8 @@ public class TimeManager {
     public static final LocalTime workDayStart = LocalTime.of(8, 0);
     public static final LocalTime workDayEnd = LocalTime.of(17, 0);
     public final Duration workTimeDuration = Duration.between(workDayStart, workDayEnd);
-    public static final Set<DayOfWeek> workDays = new HashSet<>(Arrays.asList(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY));
+    public static final Set<DayOfWeek> workDays =
+            new HashSet<>(Arrays.asList(MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY));
 
     public TimeManager() {
 
@@ -73,4 +74,3 @@ public class TimeManager {
     }
 
 }
-
