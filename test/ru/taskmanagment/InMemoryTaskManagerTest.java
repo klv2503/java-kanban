@@ -59,18 +59,14 @@ public class InMemoryTaskManagerTest extends TaskManagerTest {
     @Test
     public void shouldCreateSubTaskInEpicAndFindAfter() {
         int epicId = manager.getSpecificEpic();
-        int place = 1;
-        if (epicId == -1) {
-            epicId = 1;
-            place = 0;
-        }
+        int quantitySubTask = manager.epicsList.get(epicId).getEpicsTasks().size();
         int taskId = 6;
         String errorMessage = "Данные найденной подзадачи не совпадают с данными задачи-прототипа";
         Task task = manager.getTaskWithId(6);
-        manager.addNewSubToEpic(epicId, taskId, place);
-        SubTask subTask = manager.getEpicsSubTaskByIndex(epicId, place);
-        boolean resoult = subTask.name.equals(task.name) && subTask.description.equals(task.description);
-        assertEquals(true, resoult, errorMessage);
+        manager.addNewSubToEpic(epicId, manager.makeSubTask(manager.tasksList.get(taskId), 15));
+        SubTask subTask = manager.getEpicsSubTaskByIndex(epicId, quantitySubTask);
+        boolean result = subTask.name.equals(task.name) && subTask.description.equals(task.description);
+        assertEquals(true, result, errorMessage);
     }
 
     @Test
@@ -131,7 +127,7 @@ public class InMemoryTaskManagerTest extends TaskManagerTest {
             Epic epic = manager.epicsList.get(i);
             SubTask subTask = manager.makeSubTask(task, manager.standartDuration);
             indexInHistory.add("s" + subTask.ownCode);
-            epic.addSubTaskInEpic(subTask, 0);
+            epic.addSubTaskInEpic(subTask);
             manager.getEpicsSubTaskByIndex(i, 0);
             manager.epicsList.put(i, epic);
         }

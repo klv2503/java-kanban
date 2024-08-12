@@ -8,9 +8,9 @@ public class Task {
     public int code;
     public String name;
     public String description;
-    Status status;
-    LocalDateTime startTime;
-    Duration duration;
+    public Status status;
+    public LocalDateTime startTime;
+    public Duration duration;
 
     public Task() {
         this.name = name;
@@ -21,11 +21,13 @@ public class Task {
         this.code = code;
         this.description = description;
         this.name = name;
-        status = Status.NEW;
+        this.status = Status.NEW;
+        this.startTime = null;
+        this.duration = Duration.ofMinutes(0);
     }
 
     public Task(int code, String name, Status status, String description,
-                   String startTime, String duration) {
+                String startTime, String duration) {
         this.code = code;
         this.name = name;
         this.description = description;
@@ -51,7 +53,10 @@ public class Task {
     }
 
     public Long getDurationInMinutes() {
-        return duration.toMinutes();
+        if (duration != null)
+            return duration.toMinutes();
+        else
+            return 0L;
     }
 
     public void setDuration(Duration duration) {

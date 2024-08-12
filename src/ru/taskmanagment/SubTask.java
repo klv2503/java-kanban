@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 public class SubTask extends Task {
     int ownCode;
 
-
     public SubTask(int code, String name, String description, int ownCode, Status status) {
         super(code, name, description);
         this.ownCode = ownCode;

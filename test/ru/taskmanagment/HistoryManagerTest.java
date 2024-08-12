@@ -123,7 +123,7 @@ public class HistoryManagerTest extends TaskManagerTest {
         for (int i : manager.epicsList.keySet()) {
             Epic epic = manager.epicsList.get(i);
             SubTask subTask = manager.makeSubTask(task, manager.standartDuration);
-            epic.addSubTaskInEpic(subTask, 0);
+            epic.addSubTaskInEpic(subTask);
             subTask = manager.getEpicsSubTaskByIndex(i, 0);
             indexes.add("s" + subTask.ownCode);
         }
