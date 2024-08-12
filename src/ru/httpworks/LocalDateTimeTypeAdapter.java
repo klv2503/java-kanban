@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class LocalDateTimeTypeAdapter extends TypeAdapter<LocalDateTime> {
-    final static DateTimeFormatter dateTimeFormatter = TimeManager.dateTimeFormatter;
+    static final DateTimeFormatter dateTimeFormatter = TimeManager.dateTimeFormatter;
 
     @Override
     public void write(JsonWriter jsonWriter, LocalDateTime localDateTime) throws IOException {
