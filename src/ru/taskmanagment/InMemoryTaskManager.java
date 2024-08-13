@@ -203,7 +203,6 @@ public class InMemoryTaskManager implements TaskManager {
 
     @Override
     public boolean isValidTime(LocalDateTime startTime, Duration duration) {
-        getPrioritizedTasks();
         if (startTime == null || duration.toMinutes() <= 0)
             return false;
         if (sortedTasks.isEmpty())
