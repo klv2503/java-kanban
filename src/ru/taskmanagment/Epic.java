@@ -6,9 +6,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Optional;
 
-
 public class Epic extends Task {
-    Status status;
     LocalDateTime endTime;
     ArrayList<SubTask> epicsTasks;
 
@@ -29,16 +27,8 @@ public class Epic extends Task {
         this.duration = Duration.ofMinutes(localTime.getHour() * 60 + localTime.getMinute());
     }
 
-    public void setstatus(Status status) {
+    public void setStatus(Status status) {
         this.status = status;
-    }
-
-    public int getEpicCode() {
-        return code;
-    }
-
-    public void setEpicCode(int code) {
-        this.code = code;
     }
 
     public ArrayList<SubTask> getEpicsTasks() {
@@ -100,37 +90,14 @@ public class Epic extends Task {
         return String.format("%d,EPIC,%s,%s,%s,%s", code, name, status, description, str);
     }
 
-    public void addSubTaskInEndOfList(SubTask subTask) {
-        epicsTasks.add(subTask);
-        setStartTime();
-        setEndTime();
-        setDuration();
+    public void addSubTaskInEpic(SubTask subTaskForAdd) {
+        epicsTasks.add(subTaskForAdd);
+        recountEpicData();
     }
 
-    public void addSubTaskInEpic(SubTask subTaskForAdd, Integer place) {
-        //Добавить можно подзадачу по индексу place.
-        //Соответственно, пока предполагается, что place >= 0
-        //если список подзадач пуст или короче, чем numInEpic, добавляем task в конец списка
-        if (epicsTasks.isEmpty() || (epicsTasks.size() <= place)) {
-            epicsTasks.add(subTaskForAdd);
-        } else {
-            epicsTasks.add(place, subTaskForAdd);
-        }
-        setStartTime();
-        setEndTime();
-        setDuration();
-    }
-
-    public boolean deleteEpicsSubTaskByIndex(Integer subTaskNum) {
-        boolean isSuccess = false;
-        if (!epicsTasks.isEmpty() && (subTaskNum <= epicsTasks.size())) {
-            isSuccess = (!(epicsTasks.remove(subTaskNum - 1) == null));
-            if (isSuccess) {
-                setStartTime();
-                setEndTime();
-                setDuration();
-            }
-        }
+    public boolean deleteEpicsSubTask(SubTask subTask) {
+        boolean isSuccess = epicsTasks.remove(subTask);
+        recountEpicData();
         return isSuccess;
     }
 
@@ -237,4 +204,11 @@ public class Epic extends Task {
         return getStatus();
     }
 
+    public void recountEpicData() {
+        //При изменениях в списке подзадач
+        setStartTime();
+        setEndTime();
+        setDuration();
+        countEpicStatus();
+    }
 }

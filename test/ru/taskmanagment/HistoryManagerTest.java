@@ -74,10 +74,10 @@ public class HistoryManagerTest extends TaskManagerTest {
         for (int i = 0; i < 4; i++) {
             task = manager.getTaskWithId(i + 1);
             epic = manager.getEpicByCode(i + 1);
-            subTask = manager.getEpicsSubTaskByIndex(i + 1, 1);
+            subTask = manager.getSubTaskWithId(i + 1);
         }
         // Вызываем get для объектов, которые только что занесены в историю
-        subTask = manager.getEpicsSubTaskByIndex(1, 1);
+        subTask = manager.getSubTaskWithId(1);
         epic = manager.getEpicByCode(2);
         task = manager.getTaskWithId(3);
 
@@ -123,7 +123,7 @@ public class HistoryManagerTest extends TaskManagerTest {
         for (int i : manager.epicsList.keySet()) {
             Epic epic = manager.epicsList.get(i);
             SubTask subTask = manager.makeSubTask(task, manager.standartDuration);
-            epic.addSubTaskInEpic(subTask, 0);
+            epic.addSubTaskInEpic(subTask);
             subTask = manager.getEpicsSubTaskByIndex(i, 0);
             indexes.add("s" + subTask.ownCode);
         }

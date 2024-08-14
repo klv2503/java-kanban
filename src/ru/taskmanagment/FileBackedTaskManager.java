@@ -3,6 +3,7 @@ package ru.taskmanagment;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,8 +13,6 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
 
     static File fileName;
     final String home = System.getProperty("user.home");
-    //Пока список тупо перезаписывается при вызове метода save.
-    //Скорее всего, список переделаю в двусвязную мапу по образцу хранения истории.
     static List<String> dataToSave;
 
     public FileBackedTaskManager(File fileToSave) {
@@ -22,11 +21,6 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     public void prepareDataToSave() {
-        //Прочитал про стандарт формата CSV, решил сделать файл согласно стандарту.
-        //Поэтому заголовки пишутся в файл, а значения счетчиков высчитываются при загрузке.
-        //Добавил новые поля согласно ТЗ к Спринту8.
-        //Класс CSVFormatter сплагиатил у наставника. Заодно нашлось более симпатичное (как мне кажется)
-        //решение с преобразованием задач в строки.
         dataToSave.clear();
         dataToSave.add("id,type,name,status,description,startTime,duration,endTime,parentTask,epic\n");
         dataToSave.addAll(
@@ -65,7 +59,7 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         }
     }
 
-    public static void restoreTasks() {
+    public void restoreTasks() {
         if (dataToSave.isEmpty())
             return;
         taskCounter = 0;
@@ -107,7 +101,6 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     public static FileBackedTaskManager loadFromFile(File file) {
-        //Выяснилось, что я прозевал сигнатуру метода. Переделал под требования ТЗ к спринту7
         FileBackedTaskManager fileBackedTaskManager = new FileBackedTaskManager(file);
         if (file.exists()) {
             try {
@@ -121,9 +114,10 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public void createTask(String name, String description) {
-        super.createTask(name, description);
+    public Task createTask(String name, String description) {
+        Task task = super.createTask(name, description);
         save();
+        return task;
     }
 
     @Override
@@ -140,15 +134,17 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public void makeTaskExecutable(Task task, int duration) {
-        super.makeTaskExecutable(task, duration);
+    public boolean makeTaskExecutable(Task task, LocalDateTime lockDT, long duration) {
+        boolean result = super.makeTaskExecutable(task, lockDT, duration);
         save();
+        return result;
     }
 
     @Override
-    public void removeTaskWithId(int taskId) {
-        super.removeTaskWithId(taskId);
+    public boolean removeTaskWithId(int taskId) {
+        boolean result = super.removeTaskWithId(taskId);
         save();
+        return result;
     }
 
     @Override
@@ -178,15 +174,36 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     }
 
     @Override
-    public void addNewSubToEpic(Integer epicId, Integer taskId, Integer place) {
-        super.addNewSubToEpic(epicId, taskId, place);
+    public boolean removeSubTaskWithId(int id) {
+        boolean result = super.removeSubTaskWithId(id);
+        save();
+        return result;
+    }
+
+    @Override
+    public void addNewSubToEpic(Integer epicId, SubTask subTask) {
+        super.addNewSubToEpic(epicId, subTask);
         save();
     }
 
     @Override
-    public void deleteEpic(Integer epicId) {
-        super.deleteEpic(epicId);
+    public boolean deleteEpic(Integer epicId) {
+        boolean result = super.deleteEpic(epicId);
         save();
+        return result;
+    }
+
+    @Override
+    public void changeEpic(Epic epic) {
+        super.changeEpic(epic);
+        save();
+    }
+
+    @Override
+    public SubTask createSubTaskForEpic(int taskId, int epicId, LocalDateTime startTime, int duration) {
+        SubTask subTask = super.createSubTaskForEpic(taskId, epicId, startTime, duration);
+        save();
+        return subTask;
     }
 
     @Override
